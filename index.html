@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pilotage Formation — Bloc opératoire</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-2: #0b1729;
+      --panel: #0f1e33;
+      --panel-2: #142744;
+      --line: #203756;
+      --text: #e6eef9;
+      --muted: #8ca3c3;
+      --soft: #587190;
+      --primary: #22c7d8;
+      --primary-2: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --orange: #f97316;
+      --danger: #ef4444;
+      --violet: #8b5cf6;
+      --radius: 16px;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #06101d 0%, #091626 100%);
+      color: var(--text);
+    }
+    h1, h2, h3, h4, p { margin: 0; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      background: rgba(7, 17, 31, 0.92);
+      border-bottom: 1px solid rgba(34, 199, 216, 0.18);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-badge {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      box-shadow: 0 8px 24px rgba(34, 199, 216, 0.28);
+      font-size: 22px;
+    }
+    .brand small {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-size: 11px;
+      margin-top: 3px;
+    }
+
+    .topbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      transition: .2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #2f527b; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      border: none;
+      box-shadow: 0 8px 22px rgba(59, 130, 246, 0.22);
+    }
+    .btn-danger { color: #ffb4b4; border-color: rgba(239, 68, 68, 0.35); }
+    .btn-sm { padding: 8px 10px; font-size: 13px; }
+
+    .shell {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .banner {
+      background: linear-gradient(135deg, rgba(34, 199, 216, 0.12), rgba(139, 92, 246, 0.12));
+      border: 1px solid rgba(34, 199, 216, 0.18);
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 18px;
+      box-shadow: var(--shadow);
+    }
+    .banner p { color: var(--muted); line-height: 1.55; margin-top: 8px; }
+    .banner-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .mini-stat {
+      background: rgba(15, 30, 51, 0.76);
+      border: 1px solid rgba(140, 163, 195, 0.12);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .mini-stat .v { font-size: 24px; font-weight: 800; margin-top: 6px; }
+    .mini-stat .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .8px; }
+
+    .profiles {
+      display: flex;
+      gap: 10px;
+      overflow: auto;
+      padding-bottom: 8px;
+      margin-bottom: 18px;
+    }
+    .profiles::-webkit-scrollbar { height: 6px; }
+    .profiles::-webkit-scrollbar-thumb { background: #254568; border-radius: 999px; }
+
+    .profile-chip {
+      min-width: 220px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      transition: .2s ease;
+    }
+    .profile-chip.active {
+      border-color: var(--chip-color, var(--primary));
+      box-shadow: 0 0 0 1px var(--chip-color, var(--primary)) inset;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)), var(--panel);
+    }
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+    .profile-chip .meta { flex: 1; min-width: 0; }
+    .profile-chip .meta .name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .profile-chip .meta .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .tab {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+      color: var(--muted);
+    }
+    .tab.active {
+      color: var(--text);
+      border-color: rgba(34, 199, 216, 0.5);
+      background: rgba(34, 199, 216, 0.08);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent, var(--primary));
+    }
+    .kpi .icon { font-size: 22px; }
+    .kpi .value { font-size: 30px; font-weight: 800; margin-top: 10px; }
+    .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .8px; margin-top: 4px; }
+    .kpi .sub { color: var(--soft); font-size: 12px; margin-top: 6px; }
+
+    .grid-2, .grid-3 {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .chart-box { position: relative; height: 300px; }
+    .chart-box.large { height: 380px; }
+
+    .ring-wrap {
+      display: grid;
+      place-items: center;
+      height: 300px;
+      position: relative;
+    }
+    .ring-center {
+      position: absolute;
+      text-align: center;
+    }
+    .ring-center .big { font-size: 40px; font-weight: 800; }
+    .ring-center .small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .filter {
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+      color: var(--muted);
+    }
+    .filter.active { color: var(--text); border-color: rgba(34,199,216,.45); background: rgba(34,199,216,.08); }
+
+    .spec-block { margin-bottom: 18px; }
+    .spec-head {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border-left: 4px solid var(--spec-color, var(--primary));
+      background: var(--panel);
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .spec-title { font-weight: 700; }
+    .spec-badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 800;
+      letter-spacing: .6px;
+    }
+    .spec-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .progress {
+      width: 140px;
+      height: 8px;
+      background: #0b1522;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .progress > span { display: block; height: 100%; }
+
+    .skills {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 10px;
+    }
+    .skill {
+      background: #10203a;
+      border: 1px solid rgba(140, 163, 195, 0.12);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .skill-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .skill-name { font-size: 14px; line-height: 1.45; }
+    .levels { display: flex; gap: 6px; }
+    .lvl {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--soft);
+      font-weight: 800;
+    }
+    .lvl.active[data-v="1"] { background: rgba(245, 158, 11, 0.14); color: var(--warning); border-color: rgba(245,158,11,.45); }
+    .lvl.active[data-v="2"] { background: rgba(249, 115, 22, 0.14); color: var(--orange); border-color: rgba(249,115,22,.45); }
+    .lvl.active[data-v="3"] { background: rgba(16, 185, 129, 0.14); color: var(--success); border-color: rgba(16,185,129,.45); }
+    .skill-status { color: var(--muted); font-size: 12px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; }
+    .input, textarea {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+    }
+    .input:focus, textarea:focus { border-color: rgba(34,199,216,.55); }
+    textarea { min-height: 120px; resize: vertical; }
+
+    .log-layout { display: grid; grid-template-columns: 1fr 1.1fr; gap: 18px; }
+    .log-list { max-height: 420px; overflow: auto; }
+    .log-row, .log-head {
+      display: grid;
+      grid-template-columns: 110px 1fr 70px 1fr 44px;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+    }
+    .log-head { color: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: .8px; }
+    .log-row { border-top: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+    .pill { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+
+    .bilan-layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; }
+    .stars { display: flex; gap: 6px; }
+    .star { font-size: 24px; opacity: .28; cursor: pointer; transition: .15s; }
+    .star.on { opacity: 1; transform: translateY(-1px); }
+    .eval-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .eval-row:first-child { border-top: 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+    }
+    th {
+      color: var(--soft);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-weight: 700;
+    }
+
+    .empty {
+      padding: 30px 14px;
+      text-align: center;
+      color: var(--soft);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: none;
+      place-items: center;
+      z-index: 100;
+      backdrop-filter: blur(6px);
+    }
+    .modal-backdrop.open { display: grid; }
+    .modal {
+      width: min(460px, calc(100vw - 24px));
+      background: var(--panel);
+      border: 1px solid rgba(34,199,216,.24);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+    .swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .swatch.active { border-color: #fff; transform: scale(1.12); }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: var(--panel);
+      border: 1px solid rgba(34,199,216,.28);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: .25s ease;
+      z-index: 120;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1180px) {
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+      .banner { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .log-layout, .bilan-layout, .form-grid { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .topbar, .shell { padding-left: 14px; padding-right: 14px; }
+    }
+    @media (max-width: 620px) {
+      .kpis { grid-template-columns: 1fr; }
+      .log-head, .log-row { grid-template-columns: 90px 1fr 56px; }
+      .log-row span:nth-child(4), .log-row button, .log-head span:nth-child(4), .log-head span:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">🏥</div>
+      <div>
+        <h1>Pilotage formation — Bloc opératoire</h1>
+        <small>Version professionnelle · multi-apprenants · suivi local</small>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" onclick="loadDemo()">⚡ Charger une démo</button>
+      <button class="btn btn-sm" onclick="exportData()">⬇ Export JSON</button>
+      <button class="btn btn-primary btn-sm" onclick="openProfileModal()">＋ Nouvel apprenant</button>
+      <button class="btn btn-danger btn-sm" onclick="resetData()">🗑 Réinitialiser</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <section class="banner">
+      <div>
+        <h2>Tableau de pilotage pédagogique — orientation cadre de santé / qualité</h2>
+        <p>
+          Outil de suivi des acquisitions en bloc opératoire, structuré pour un usage d’encadrement, de tutorat et de pilotage qualité : progression par spécialité, journal des vacations,
+          bilan formatif, vision d’équipe et lecture managériale utile pour la professionnalisation, l’organisation tutorale et la préparation des revues qualité.
+        </p>
+      </div>
+      <div class="banner-metrics">
+        <div class="mini-stat"><div class="l">Compétences totales</div><div class="v" id="global-total-skills">0</div></div>
+        <div class="mini-stat"><div class="l">Apprenants suivis</div><div class="v" id="global-learners">0</div></div>
+        <div class="mini-stat"><div class="l">Heures équipe</div><div class="v" id="global-team-hours">0h</div></div>
+        <div class="mini-stat"><div class="l">Progression moyenne</div><div class="v" id="global-team-pct">0%</div></div>
+      </div>
+    </section>
+
+    <div class="profiles" id="profiles"></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('dashboard', this)">📊 Dashboard</button>
+      <button class="tab" onclick="showTab('competences', this)">📋 Compétences</button>
+      <button class="tab" onclick="showTab('temps', this)">⏱ Temps & vacations</button>
+      <button class="tab" onclick="showTab('bilan', this)">📝 Bilan formatif</button>
+      <button class="tab" onclick="showTab('equipe', this)">👥 Vue équipe</button>
+    </div>
+
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="kpis">
+        <div class="kpi" style="--accent:var(--primary)"><div class="icon">🎯</div><div class="value" id="kpi-pct">0%</div><div class="label">Progression globale</div><div class="sub" id="kpi-pts">0 / 0 pts</div></div>
+        <div class="kpi" style="--accent:var(--success)"><div class="icon">✅</div><div class="value" id="kpi-val">0</div><div class="label">Compétences validées</div><div class="sub">Palier 3</div></div>
+        <div class="kpi" style="--accent:var(--orange)"><div class="icon">🔬</div><div class="value" id="kpi-pra">0</div><div class="label">En pratique</div><div class="sub">Palier 2</div></div>
+        <div class="kpi" style="--accent:var(--warning)"><div class="icon">👁</div><div class="value" id="kpi-obs">0</div><div class="label">Observées</div><div class="sub">Palier 1</div></div>
+        <div class="kpi" style="--accent:var(--violet)"><div class="icon">⏰</div><div class="value" id="kpi-hours">0h</div><div class="label">Heures cumulées</div><div class="sub">Sur le profil actif</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Progression globale</div></div>
+          <div class="ring-wrap">
+            <canvas id="chart-ring" width="220" height="220"></canvas>
+            <div class="ring-center"><div class="big" id="ring-pct">0%</div><div class="small">Global</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Radar par spécialité</div></div>
+          <div class="chart-box"><canvas id="chart-radar"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Distribution des paliers</div></div>
+          <div class="chart-box"><canvas id="chart-stacks"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Évolution des vacations</div></div>
+          <div class="chart-box"><canvas id="chart-timeline"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Score par spécialité</div></div>
+        <div class="chart-box large"><canvas id="chart-hbar"></canvas></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-competences">
+      <div class="filters" id="filters"></div>
+      <div id="competences"></div>
+    </section>
+
+    <section class="tab-panel" id="tab-temps">
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-header"><div class="card-title">Fiche apprenant / professionnel en parcours</div></div>
+        <div class="form-grid">
+          <div class="field"><label>Nom complet</label><input class="input" id="t-name" oninput="autoSave()"></div>
+          <div class="field"><label>Date d'arrivée</label><input class="input" type="date" id="t-arrival" oninput="autoSave()"></div>
+          <div class="field"><label>Tuteur référent</label><input class="input" id="t-tutor" oninput="autoSave()"></div>
+          <div class="field"><label>Service / pôle</label><input class="input" id="t-service" oninput="autoSave()"></div>
+          <div class="field"><label>Niveau initial</label><select class="input" id="t-level" onchange="autoSave()"><option value="">— Sélectionner —</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option></select></div>
+          <div class="field"><label>Durée prévue (mois)</label><input class="input" type="number" min="1" max="36" id="t-duration" oninput="autoSave()"></div>
+        </div>
+      </div>
+
+      <div class="log-layout">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Ajouter une vacation</div></div>
+          <div class="field" style="margin-bottom:10px"><label>Date</label><input class="input" type="date" id="log-date"></div>
+          <div class="field" style="margin-bottom:10px"><label>Spécialité</label><select class="input" id="log-spec"></select></div>
+          <div class="field" style="margin-bottom:10px"><label>Durée (heures)</label><input class="input" type="number" min="0.5" step="0.5" max="24" id="log-hours" placeholder="7.5"></div>
+          <div class="field" style="margin-bottom:14px"><label>Note de vacation</label><textarea id="log-note" placeholder="Interventions observées, actes accompagnés, points pédagogiques, points de vigilance qualité/sécurité, besoins tutoraux..."></textarea></div>
+          <button class="btn btn-primary" onclick="addLog()">Enregistrer la vacation</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Historique des vacations</div></div>
+          <div class="log-list">
+            <div class="log-head"><span>Date</span><span>Spécialité</span><span>Heures</span><span>Note</span><span></span></div>
+            <div id="logs"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Répartition des heures</div></div>
+          <div class="chart-box"><canvas id="chart-hours"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Récapitulatif des temps</div></div>
+          <div id="hours-summary" class="empty">Aucune vacation enregistrée.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-bilan">
+      <div class="bilan-layout">
+        <div style="display:grid; gap:18px;">
+          <div class="card"><div class="card-header"><div class="card-title">Points forts</div></div><textarea id="b-strengths" oninput="autoSave()" placeholder="Compétences consolidées, comportements professionnels, conformité des pratiques, points d'appui tutoraux..."></textarea></div>
+          <div class="card"><div class="card-header"><div class="card-title">Axes d'amélioration</div></div><textarea id="b-improve" oninput="autoSave()" placeholder="Situations à renforcer, points de vigilance, écarts observés, besoins tutoraux ou organisationnels..."></textarea></div>
+          <div class="card"><div class="card-header"><div class="card-title">Objectifs de la prochaine période</div></div><textarea id="b-goals" oninput="autoSave()" placeholder="Objectifs concrets, situations ciblées, critères de réussite, échéance, modalités d'accompagnement..."></textarea></div>
+        </div>
+        <div style="display:grid; gap:18px;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Évaluation formative</div></div>
+            <div class="eval-row"><span>Technicité</span><div class="stars" id="stars-tech"></div></div>
+            <div class="eval-row"><span>Autonomie</span><div class="stars" id="stars-auto"></div></div>
+            <div class="eval-row"><span>Rigueur</span><div class="stars" id="stars-rigu"></div></div>
+            <div class="eval-row"><span>Communication</span><div class="stars" id="stars-comm"></div></div>
+            <div class="eval-row"><span>Gestion du stress</span><div class="stars" id="stars-stre"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Synthèse</div></div>
+            <div id="bilan-summary"></div>
+          </div>
+          <div><button class="btn btn-primary" onclick="saveBilan()">💾 Sauvegarder le bilan</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-equipe">
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-header"><div class="card-title">Comparatif des apprenants</div></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr><th>Apprenant</th><th>Progression</th><th>Validées</th><th>Pratique</th><th>Observées</th><th>Heures</th><th>Spécialités actives</th><th>Niveau estimé</th></tr>
+            </thead>
+            <tbody id="team-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card"><div class="card-header"><div class="card-title">Progression comparée</div></div><div class="chart-box"><canvas id="chart-team-pct"></canvas></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Heures comparées</div></div><div class="chart-box"><canvas id="chart-team-hours"></canvas></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Moyenne équipe par spécialité</div></div><div class="chart-box"><canvas id="chart-team-radar"></canvas></div></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="profile-modal">
+    <div class="modal">
+      <div class="card-header" style="margin-bottom:16px"><div class="card-title">Créer un apprenant</div></div>
+      <div class="field" style="margin-bottom:12px"><label>Nom complet</label><input class="input" id="m-name" placeholder="Dupont Marie"></div>
+      <div class="field" style="margin-bottom:16px"><label>Couleur de profil</label><div class="swatches" id="swatches"></div></div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn" onclick="closeProfileModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="confirmProfile()">Créer le profil</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const SPECS = [
+      {id:'CTX', badge:'TRANS', name:'Compétences transversales', short:'Transv.', icon:'🏥', color:'#3b82f6', skills:[
+        {id:'ctx1', n:'Accueil et installation du patient au bloc opératoire'},
+        {id:'ctx2', n:'Vérification de l\'identité et du dossier patient'},
+        {id:'ctx3', n:'Application des protocoles d\'hygiène et d\'asepsie'},
+        {id:'ctx4', n:'Gestion et rangement du matériel chirurgical'},
+        {id:'ctx5', n:'Communication avec l\'équipe pluridisciplinaire'},
+        {id:'ctx6', n:'Traçabilité et documentation des actes'}
+      ]},
+      {id:'ORT', badge:'ORTHO', name:'Chirurgie orthopédique', short:'Orthopédie', icon:'🦴', color:'#f59e0b', skills:[
+        {id:'ort1', n:'Préparation de la table opératoire en orthopédie'},
+        {id:'ort2', n:'Installation du patient et protection des appuis'},
+        {id:'ort3', n:'Instrumentation pour ostéosynthèse'},
+        {id:'ort4', n:'Gestion du matériel d\'implants et prothèses'},
+        {id:'ort5', n:'Assistance en arthroplastie'},
+        {id:'ort6', n:'Traçabilité des implants'}
+      ]},
+      {id:'VIS', badge:'VISC', name:'Chirurgie viscérale', short:'Viscérale', icon:'🔬', color:'#10b981', skills:[
+        {id:'vis1', n:'Instrumentation laparoscopique de base'},
+        {id:'vis2', n:'Préparation du système d\'insufflation'},
+        {id:'vis3', n:'Assistance en cholécystectomie laparoscopique'},
+        {id:'vis4', n:'Gestion de l\'hémostase électrique'},
+        {id:'vis5', n:'Assistance en chirurgie colorectale'},
+        {id:'vis6', n:'Conversion laparoscopie vers laparotomie'}
+      ]},
+      {id:'URO', badge:'URO', name:'Chirurgie urologique', short:'Urologie', icon:'🔵', color:'#8b5cf6', skills:[
+        {id:'uro1', n:'Instrumentation en endoscopie urologique'},
+        {id:'uro2', n:'Préparation du matériel de résection'},
+        {id:'uro3', n:'Assistance en néphrectomie laparoscopique'},
+        {id:'uro4', n:'Gestion des systèmes d\'irrigation'},
+        {id:'uro5', n:'Assistance en cystectomie et reconstruction'}
+      ]},
+      {id:'VAS', badge:'VASC', name:'Chirurgie vasculaire', short:'Vasculaire', icon:'🩸', color:'#ef4444', skills:[
+        {id:'vas1', n:'Préparation du matériel de chirurgie artérielle'},
+        {id:'vas2', n:'Assistance en endartériectomie carotidienne'},
+        {id:'vas3', n:'Gestion des prothèses vasculaires'},
+        {id:'vas4', n:'Instrumentation pour pontage'},
+        {id:'vas5', n:'Assistance en chirurgie veineuse'}
+      ]},
+      {id:'STE', badge:'STÉR', name:'Stérilisation et hygiène', short:'Stéril.', icon:'🧼', color:'#06b6d4', skills:[
+        {id:'ste1', n:'Pré-désinfection et décontamination du matériel'},
+        {id:'ste2', n:'Processus de stérilisation vapeur'},
+        {id:'ste3', n:'Contrôle et traçabilité des cycles'},
+        {id:'ste4', n:'Gestion des dispositifs à usage unique'},
+        {id:'ste5', n:'Conditionnement et stockage du matériel stérile'},
+        {id:'ste6', n:'Précautions standard et complémentaires'}
+      ]},
+      {id:'GYN', badge:'GYN', name:'Chirurgie gynécologique', short:'Gynéco', icon:'🌸', color:'#a855f7', skills:[
+        {id:'gyn1', n:'Installation en position gynécologique'},
+        {id:'gyn2', n:'Instrumentation en cœlioscopie gynécologique'},
+        {id:'gyn3', n:'Assistance en hystéroscopie opératoire'},
+        {id:'gyn4', n:'Assistance en chirurgie des annexes'},
+        {id:'gyn5', n:'Assistance en hystérectomie'}
+      ]},
+      {id:'ANE', badge:'ANES', name:'Aide anesthésie', short:'Anesth.', icon:'💉', color:'#94a3b8', skills:[
+        {id:'ane1', n:'Préparation du chariot d\'anesthésie'},
+        {id:'ane2', n:'Assistance à l\'induction anesthésique'},
+        {id:'ane3', n:'Surveillance peropératoire des paramètres vitaux'},
+        {id:'ane4', n:'Gestion des voies veineuses et perfusions'},
+        {id:'ane5', n:'Assistance en anesthésie loco-régionale'}
+      ]}
+    ];
+
+    const TOTAL_SKILLS = SPECS.reduce((sum, sp) => sum + sp.skills.length, 0);
+    const COLORS = ['#22c7d8','#10b981','#f59e0b','#8b5cf6','#ef4444','#ec4899','#6366f1','#f97316','#84cc16','#a855f7'];
+    const STORE_KEY = 'bloc-pro-v1';
+
+    let app = { currentProfile: null, profiles: {} };
+    let activeFilter = 'ALL';
+    let selectedColor = COLORS[0];
+    let charts = {};
+
+    function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function makeProfile(id, name, color) {
+      return { id, name, color, trainee: { name, arrival:'', tutor:'', service:'', level:'', duration:'' }, skills: {}, logs: [], bilan: { strengths:'', improve:'', goals:'', stars:{ tech:0, auto:0, rigu:0, comm:0, stre:0 } } };
+    }
+    function save() { localStorage.setItem(STORE_KEY, JSON.stringify(app)); }
+    function load() { try { const raw = localStorage.getItem(STORE_KEY); if (raw) app = JSON.parse(raw); } catch (_) {} if (!app.profiles) app.profiles = {}; if (!app.currentProfile || !app.profiles[app.currentProfile]) app.currentProfile = Object.keys(app.profiles)[0] || null; }
+    function current() { return app.profiles[app.currentProfile] || null; }
+    function toast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2400); }
+    function escapeHtml(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function showTab(id, btn) { document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab').forEach(el => el.classList.remove('active')); document.getElementById('tab-' + id).classList.add('active'); btn.classList.add('active'); if (id === 'equipe') renderTeam(); }
+    function openProfileModal() { renderSwatches(); document.getElementById('m-name').value = ''; document.getElementById('profile-modal').classList.add('open'); setTimeout(() => document.getElementById('m-name').focus(), 30); }
+    function closeProfileModal() { document.getElementById('profile-modal').classList.remove('open'); }
+    function renderSwatches() { const wrap = document.getElementById('swatches'); selectedColor = COLORS[0]; wrap.innerHTML = COLORS.map((c, i) => `<div class="swatch ${i===0?'active':''}" style="background:${c}" onclick="pickColor('${c}', this)"></div>`).join(''); }
+    function pickColor(color, el) { selectedColor = color; document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active')); el.classList.add('active'); }
+    function confirmProfile() { const name = document.getElementById('m-name').value.trim(); if (!name) { toast('Renseignez un nom complet.'); return; } const id = uid(); app.profiles[id] = makeProfile(id, name, selectedColor); app.currentProfile = id; save(); closeProfileModal(); hydrateUI(); toast('Profil créé.'); }
+    function removeProfile(id) { const p = app.profiles[id]; if (!p) return; if (!confirm(`Supprimer le profil de ${p.name} ?`)) return; delete app.profiles[id]; app.currentProfile = Object.keys(app.profiles)[0] || null; save(); hydrateUI(); toast('Profil supprimé.'); }
+    function switchProfile(id) { persistInputs(); app.currentProfile = id; save(); hydrateUI(); }
+    function persistInputs() { const p = current(); if (!p) return; p.trainee = { name: val('t-name'), arrival: val('t-arrival'), tutor: val('t-tutor'), service: val('t-service'), level: val('t-level'), duration: val('t-duration') }; p.bilan.strengths = val('b-strengths'); p.bilan.improve = val('b-improve'); p.bilan.goals = val('b-goals'); }
+    function autoSave() { persistInputs(); save(); renderTeam(); renderBilanSummary(); }
+    function saveBilan() { autoSave(); toast('Bilan sauvegardé.'); }
+    function val(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+    function setVal(id, value) { const el = document.getElementById(id); if (el) el.value = value || ''; }
+    function computeStats(profile) {
+      const p = profile || current();
+      if (!p) return { obs:0, pra:0, val:0, pts:0, maxPts:TOTAL_SKILLS*3, pct:0, totalHours:0 };
+      let obs = 0, pra = 0, val3 = 0, pts = 0;
+      SPECS.forEach(sp => sp.skills.forEach(sk => { const v = p.skills[sk.id] || 0; if (v === 1) obs++; if (v === 2) pra++; if (v === 3) val3++; pts += v; }));
+      const maxPts = TOTAL_SKILLS * 3;
+      const totalHours = (p.logs || []).reduce((sum, l) => sum + (+l.hours || 0), 0);
+      return { obs, pra, val: val3, pts, maxPts, pct: maxPts ? pts/maxPts*100 : 0, totalHours };
+    }
+    function levelLabel(pct) { if (pct < 20) return 'Débutant'; if (pct < 50) return 'En progression'; if (pct < 75) return 'Intermédiaire'; if (pct < 90) return 'Avancé'; return 'Expert'; }
+    function renderProfiles() {
+      const wrap = document.getElementById('profiles'); const profiles = Object.values(app.profiles);
+      if (!profiles.length) { wrap.innerHTML = '<div class="empty" style="width:100%">Aucun apprenant. Cliquez sur “Nouvel apprenant” ou chargez une démo.</div>'; return; }
+      wrap.innerHTML = profiles.map(p => { const stats = computeStats(p); const initials = p.name.split(' ').map(s => s[0] || '').slice(0,2).join('').toUpperCase() || '?'; return `<div class="profile-chip ${p.id===app.currentProfile?'active':''}" style="--chip-color:${p.color}"><div class="avatar" style="background:${p.color}">${initials}</div><div class="meta" onclick="switchProfile('${p.id}')" style="cursor:pointer"><div class="name">${escapeHtml(p.name)}</div><div class="sub">${Math.round(stats.pct)}% · ${stats.val} validées · ${stats.totalHours.toFixed(1)}h</div></div><button class="btn btn-sm" onclick="removeProfile('${p.id}')">×</button></div>`; }).join('');
+    }
+    function renderGlobalBanner() { const profiles = Object.values(app.profiles); const teamHours = profiles.reduce((s, p) => s + computeStats(p).totalHours, 0); const meanPct = profiles.length ? Math.round(profiles.reduce((s, p) => s + computeStats(p).pct, 0) / profiles.length) : 0; document.getElementById('global-total-skills').textContent = TOTAL_SKILLS; document.getElementById('global-learners').textContent = profiles.length; document.getElementById('global-team-hours').textContent = teamHours.toFixed(1) + 'h'; document.getElementById('global-team-pct').textContent = meanPct + '%'; }
+    function renderDashboard() { const p = current(); const s = computeStats(p); document.getElementById('kpi-pct').textContent = Math.round(s.pct) + '%'; document.getElementById('kpi-pts').textContent = `${s.pts} / ${s.maxPts} pts`; document.getElementById('kpi-val').textContent = s.val; document.getElementById('kpi-pra').textContent = s.pra; document.getElementById('kpi-obs').textContent = s.obs; document.getElementById('kpi-hours').textContent = (s.totalHours % 1 === 0 ? s.totalHours.toFixed(0) : s.totalHours.toFixed(1)) + 'h'; document.getElementById('ring-pct').textContent = Math.round(s.pct) + '%'; renderCharts(); }
+    function renderFilters() { const wrap = document.getElementById('filters'); wrap.innerHTML = `<button class="filter ${activeFilter==='ALL'?'active':''}" onclick="setFilter('ALL')">Toutes (${TOTAL_SKILLS})</button>` + SPECS.map(sp => `<button class="filter ${activeFilter===sp.id?'active':''}" onclick="setFilter('${sp.id}')">${sp.icon} ${sp.short}</button>`).join(''); }
+    function setFilter(id) { activeFilter = id; renderFilters(); renderCompetences(); }
+    function renderCompetences() {
+      const p = current(); const skills = p ? p.skills : {}; const source = activeFilter === 'ALL' ? SPECS : SPECS.filter(sp => sp.id === activeFilter); const host = document.getElementById('competences');
+      if (!p) { host.innerHTML = '<div class="empty">Aucun profil sélectionné.</div>'; return; }
+      host.innerHTML = source.map(sp => { const done = sp.skills.filter(sk => skills[sk.id] === 3).length; const practice = sp.skills.filter(sk => skills[sk.id] === 2).length; const observed = sp.skills.filter(sk => skills[sk.id] === 1).length; const pts = done*3 + practice*2 + observed; const pct = Math.round((pts / (sp.skills.length * 3)) * 100); return `<div class="spec-block"><div class="spec-head" style="--spec-color:${sp.color}"><div style="font-size:22px">${sp.icon}</div><div class="spec-badge" style="background:${sp.color}22;color:${sp.color}">${sp.badge}</div><div class="spec-title">${sp.name}</div><div class="spec-right"><span>${done}/${sp.skills.length} validées</span><div class="progress"><span style="width:${pct}%;background:${sp.color}"></span></div><span>${pct}%</span></div></div><div class="skills">${sp.skills.map(sk => { const v = skills[sk.id] || 0; const label = v === 1 ? 'Observée' : v === 2 ? 'Pratiquée' : v === 3 ? 'Validée' : 'Non commencée'; return `<div class="skill"><div class="skill-top"><div class="skill-name">${escapeHtml(sk.n)}</div><div class="levels"><button class="lvl ${v>=1?'active':''}" data-v="1" onclick="setSkill('${sk.id}', 1)">O</button><button class="lvl ${v>=2?'active':''}" data-v="2" onclick="setSkill('${sk.id}', 2)">P</button><button class="lvl ${v>=3?'active':''}" data-v="3" onclick="setSkill('${sk.id}', 3)">V</button></div></div><div class="skill-status">Statut : ${label}</div></div>`; }).join('')}</div></div>`; }).join('');
+    }
+    function setSkill(skillId, palier) { const p = current(); if (!p) return; const currentValue = p.skills[skillId] || 0; const newValue = currentValue === palier ? palier - 1 : palier; if (newValue <= 0) delete p.skills[skillId]; else p.skills[skillId] = newValue; save(); renderCompetences(); renderDashboard(); renderTeam(); renderGlobalBanner(); renderBilanSummary(); }
+    function renderTraineeForm() { const p = current(); if (!p) { ['t-name','t-arrival','t-tutor','t-service','t-level','t-duration','b-strengths','b-improve','b-goals'].forEach(id => setVal(id, '')); return; } setVal('t-name', p.trainee.name); setVal('t-arrival', p.trainee.arrival); setVal('t-tutor', p.trainee.tutor); setVal('t-service', p.trainee.service); setVal('t-level', p.trainee.level); setVal('t-duration', p.trainee.duration); setVal('b-strengths', p.bilan.strengths); setVal('b-improve', p.bilan.improve); setVal('b-goals', p.bilan.goals); }
+    function populateSpecSelect() { document.getElementById('log-spec').innerHTML = '<option value="">— Sélectionner —</option>' + SPECS.map(sp => `<option value="${sp.id}">${sp.icon} ${sp.name}</option>`).join(''); }
+    function addLog() { const p = current(); if (!p) { toast('Créez d\'abord un profil.'); return; } const date = val('log-date'); const spec = val('log-spec'); const hours = parseFloat(val('log-hours')); const note = val('log-note').trim(); if (!date || !spec || !hours) { toast('Date, spécialité et durée sont obligatoires.'); return; } p.logs.push({ id: uid(), date, spec, hours, note }); save(); setVal('log-hours', ''); setVal('log-note', ''); renderLogs(); renderHoursSummary(); renderDashboard(); renderTeam(); renderGlobalBanner(); toast('Vacation enregistrée.'); }
+    function deleteLog(id) { const p = current(); if (!p) return; p.logs = p.logs.filter(log => log.id !== id); save(); renderLogs(); renderHoursSummary(); renderDashboard(); renderTeam(); renderGlobalBanner(); }
+    function renderLogs() { const p = current(); const host = document.getElementById('logs'); if (!p || !p.logs.length) { host.innerHTML = '<div class="empty">Aucune vacation enregistrée.</div>'; return; } const sorted = [...p.logs].sort((a, b) => b.date.localeCompare(a.date)); host.innerHTML = sorted.map(log => { const sp = SPECS.find(s => s.id === log.spec); return `<div class="log-row"><span>${log.date}</span><span><span class="pill" style="background:${sp ? sp.color+'22' : '#3b82f622'}; color:${sp ? sp.color : '#3b82f6'}">${sp ? sp.badge : log.spec}</span></span><span>${log.hours}h</span><span title="${escapeHtml(log.note)}">${escapeHtml(log.note || '')}</span><button class="btn btn-sm" onclick="deleteLog('${log.id}')">🗑</button></div>`; }).join(''); }
+    function renderHoursSummary() { const p = current(); const host = document.getElementById('hours-summary'); if (!p || !p.logs.length) { host.innerHTML = '<div class="empty">Aucune vacation enregistrée.</div>'; return; } const total = p.logs.reduce((sum, l) => sum + (+l.hours || 0), 0); const bySpec = {}; p.logs.forEach(log => bySpec[log.spec] = (bySpec[log.spec] || 0) + (+log.hours || 0)); const rows = Object.entries(bySpec).sort((a, b) => b[1] - a[1]); host.innerHTML = `<div style="display:flex;justify-content:space-between;padding:8px 0 12px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700"><span>Total cumulé</span><span style="color:var(--primary)">${total.toFixed(1)}h</span></div>` + rows.map(([id, hours]) => { const sp = SPECS.find(s => s.id === id); return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span>${sp ? sp.name : id}</span><span>${hours.toFixed(1)}h</span></div>`; }).join(''); }
+    function renderStars() { const p = current(); const keys = ['tech','auto','rigu','comm','stre']; keys.forEach(key => { const wrap = document.getElementById('stars-' + key); const value = p ? (p.bilan.stars[key] || 0) : 0; wrap.innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="star ${i < value ? 'on' : ''}" onclick="setStar('${key}', ${i+1})">★</span>`).join(''); }); }
+    function setStar(key, value) { const p = current(); if (!p) return; p.bilan.stars[key] = p.bilan.stars[key] === value ? 0 : value; save(); renderStars(); renderBilanSummary(); }
+    function renderBilanSummary() { const p = current(); const host = document.getElementById('bilan-summary'); if (!p) { host.innerHTML = '<div class="empty">Aucun profil sélectionné.</div>'; return; } const s = computeStats(p); const stars = Object.values(p.bilan.stars || {}); const avg = stars.length ? (stars.reduce((a,b) => a+b, 0) / stars.length) : 0; const level = levelLabel(s.pct); host.innerHTML = `<div class="eval-row"><span>Progression</span><strong style="color:var(--primary)">${Math.round(s.pct)}%</strong></div><div class="eval-row"><span>Compétences validées</span><strong style="color:var(--success)">${s.val}/${TOTAL_SKILLS}</strong></div><div class="eval-row"><span>Évaluation moyenne</span><strong style="color:var(--warning)">${avg.toFixed(1)}/5</strong></div><div class="eval-row"><span>Niveau estimé</span><strong style="color:var(--violet)">${level}</strong></div>`; }
+    function renderTeam() { const host = document.getElementById('team-body'); const profiles = Object.values(app.profiles); if (!profiles.length) { host.innerHTML = '<tr><td colspan="8" class="empty">Aucun apprenant.</td></tr>'; updateTeamCharts([]); return; } host.innerHTML = profiles.map(p => { const s = computeStats(p); const activeSpecs = SPECS.filter(sp => sp.skills.some(sk => p.skills[sk.id])).length; const level = levelLabel(s.pct); return `<tr><td>${escapeHtml(p.name)}</td><td>${Math.round(s.pct)}%</td><td style="color:var(--success)">${s.val}</td><td style="color:var(--orange)">${s.pra}</td><td style="color:var(--warning)">${s.obs}</td><td style="color:var(--violet)">${s.totalHours.toFixed(1)}h</td><td>${activeSpecs} / ${SPECS.length}</td><td>${level}</td></tr>`; }).join(''); updateTeamCharts(profiles); }
+    function chart(id, type, data, options) { if (charts[id]) { charts[id].data = data; charts[id].options = options; charts[id].update(); return charts[id]; } charts[id] = new Chart(document.getElementById(id).getContext('2d'), { type, data, options }); return charts[id]; }
+    function renderCharts() {
+      const p = current(); const s = computeStats(p); const skills = p ? p.skills : {};
+      chart('chart-ring', 'doughnut', { datasets: [{ data: [s.pct, 100 - s.pct], backgroundColor: ['#22c7d8', '#10213a'], borderWidth: 0 }] }, { cutout: '78%', plugins: { legend: { display: false }, tooltip: { enabled: false } } });
+      const radarSpecs = SPECS.slice(0, 8);
+      const radarData = radarSpecs.map(sp => { const pts = sp.skills.reduce((sum, sk) => sum + (skills[sk.id] || 0), 0); return Math.round(pts / (sp.skills.length * 3) * 100); });
+      chart('chart-radar', 'radar', { labels: radarSpecs.map(sp => sp.short), datasets: [{ data: radarData, borderColor: '#22c7d8', backgroundColor: 'rgba(34,199,216,.14)', pointBackgroundColor: '#22c7d8', borderWidth: 2 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { suggestedMin: 0, suggestedMax: 100, ticks: { stepSize: 25, color: '#6f88a7', backdropColor: 'transparent' }, grid: { color: 'rgba(255,255,255,.06)' }, pointLabels: { color: '#9db2cf' } } } });
+      const labels = SPECS.map(sp => sp.short);
+      const obs = SPECS.map(sp => sp.skills.filter(sk => (skills[sk.id] || 0) === 1).length);
+      const pra = SPECS.map(sp => sp.skills.filter(sk => (skills[sk.id] || 0) === 2).length);
+      const val3 = SPECS.map(sp => sp.skills.filter(sk => (skills[sk.id] || 0) === 3).length);
+      chart('chart-stacks', 'bar', { labels, datasets: [{ label: 'Observé', data: obs, backgroundColor: 'rgba(245,158,11,.72)', stack: 's' }, { label: 'Pratique', data: pra, backgroundColor: 'rgba(249,115,22,.72)', stack: 's' }, { label: 'Validé', data: val3, backgroundColor: 'rgba(16,185,129,.72)', stack: 's' }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9db2cf' } } }, scales: { x: { ticks: { color: '#89a1bf' }, grid: { display: false } }, y: { ticks: { color: '#89a1bf' }, grid: { color: 'rgba(255,255,255,.05)' } } } });
+      const logs = p ? [...p.logs].sort((a,b) => a.date.localeCompare(b.date)) : []; let cumHours = 0; const tlLabels = logs.map(l => l.date.slice(5)); const tlData = logs.map(l => { cumHours += +l.hours || 0; return Math.round(cumHours * 10) / 10; });
+      chart('chart-timeline', 'line', { labels: tlLabels, datasets: [{ data: tlData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.12)', fill: true, tension: .3, pointRadius: 3 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#89a1bf' }, grid: { display: false } }, y: { ticks: { color: '#89a1bf' }, grid: { color: 'rgba(255,255,255,.05)' } } } });
+      const hbarScores = SPECS.map(sp => { const pts = sp.skills.reduce((sum, sk) => sum + (skills[sk.id] || 0), 0); return Math.round(pts / (sp.skills.length * 3) * 100); });
+      chart('chart-hbar', 'bar', { labels, datasets: [{ data: hbarScores, backgroundColor: SPECS.map(sp => sp.color + 'cc'), borderRadius: 8 }] }, { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min:0, max:100, ticks: { color: '#89a1bf' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#89a1bf' }, grid: { display: false } } } });
+      const bySpec = {}; if (p) p.logs.forEach(log => bySpec[log.spec] = (bySpec[log.spec] || 0) + (+log.hours || 0)); const hourIds = Object.keys(bySpec);
+      chart('chart-hours', 'doughnut', { labels: hourIds.map(id => (SPECS.find(sp => sp.id === id) || {}).short || id), datasets: [{ data: hourIds.map(id => bySpec[id]), backgroundColor: hourIds.map(id => ((SPECS.find(sp => sp.id === id) || {}).color || '#3b82f6') + 'cc'), borderColor: '#0f1e33', borderWidth: 1 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9db2cf', boxWidth: 14 } } } });
+    }
+    function updateTeamCharts(profiles) {
+      const names = profiles.map(p => p.name.split(' ')[0]); const colors = profiles.map(p => p.color + 'cc'); const pcts = profiles.map(p => Math.round(computeStats(p).pct)); const hours = profiles.map(p => computeStats(p).totalHours);
+      chart('chart-team-pct', 'bar', { labels: names, datasets: [{ data: pcts, backgroundColor: colors, borderRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#89a1bf' }, grid: { display: false } }, y: { min:0, max:100, ticks: { color: '#89a1bf' }, grid: { color: 'rgba(255,255,255,.05)' } } } });
+      chart('chart-team-hours', 'bar', { labels: names, datasets: [{ data: hours, backgroundColor: colors, borderRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#89a1bf' }, grid: { display: false } }, y: { ticks: { color: '#89a1bf' }, grid: { color: 'rgba(255,255,255,.05)' } } } });
+      const radarSpecs = SPECS.slice(0, 8);
+      const avg = radarSpecs.map(sp => { if (!profiles.length) return 0; const total = profiles.reduce((sum, p) => { const pts = sp.skills.reduce((acc, sk) => acc + (p.skills[sk.id] || 0), 0); return sum + (pts / (sp.skills.length * 3) * 100); }, 0); return Math.round(total / profiles.length); });
+      chart('chart-team-radar', 'radar', { labels: radarSpecs.map(sp => sp.short), datasets: [{ data: avg, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.14)', pointBackgroundColor: '#8b5cf6', borderWidth: 2 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { suggestedMin:0, suggestedMax:100, ticks: { stepSize:25, color:'#6f88a7', backdropColor:'transparent' }, grid:{ color:'rgba(255,255,255,.06)' }, pointLabels:{ color:'#9db2cf' } } } });
+    }
+    function exportData() { const blob = new Blob([JSON.stringify(app, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'pilotage-bloc-operatoire.json'; a.click(); URL.revokeObjectURL(url); toast('Export téléchargé.'); }
+    function resetData() { if (!confirm('Réinitialiser toutes les données locales ?')) return; localStorage.removeItem(STORE_KEY); app = { currentProfile: null, profiles: {} }; hydrateUI(); toast('Données réinitialisées.'); }
+    function loadDemo() {
+      if (!confirm('Charger une démonstration multi-apprenants ?')) return;
+      app = { currentProfile: null, profiles: {} };
+      const models = [{ name:'Dupont Marie', color:'#22c7d8', ratio:.62 }, { name:'Bernard Lucas', color:'#10b981', ratio:.38 }, { name:'Fontaine Lucie', color:'#ec4899', ratio:.86 }];
+      models.forEach(m => {
+        const id = uid(); const p = makeProfile(id, m.name, m.color);
+        p.trainee.arrival = '2026-01-05'; p.trainee.tutor = 'Dr Martin'; p.trainee.service = 'Bloc opératoire central'; p.trainee.level = m.ratio > .7 ? 'Avancé' : m.ratio > .45 ? 'Intermédiaire' : 'Débutant'; p.trainee.duration = '12';
+        let count = 0; const target = Math.round(TOTAL_SKILLS * m.ratio);
+        SPECS.forEach(sp => sp.skills.forEach(sk => { if (count < target) { const r = Math.random(); p.skills[sk.id] = r < .32 ? 1 : r < .68 ? 2 : 3; count++; } }));
+        for (let i = 0; i < 10; i++) { const spec = SPECS[i % SPECS.length]; const d = new Date(2026, 0, 6 + i * 4); p.logs.push({ id: uid(), date: d.toISOString().slice(0,10), spec: spec.id, hours: Math.round((6 + Math.random()*3) * 2) / 2, note: 'Vacation tutorée en ' + spec.short }); }
+        p.bilan.strengths = 'Respect des règles d\'hygiène, bonne intégration dans l\'équipe et progression technique régulière.';
+        p.bilan.improve = 'Renforcer l\'autonomie sur les interventions complexes et la préparation anticipée du matériel.';
+        p.bilan.goals = 'Consolider 3 spécialités prioritaires, améliorer la traçabilité et atteindre davantage de validations tutorées.';
+        p.bilan.stars = { tech:4, auto:3, rigu:5, comm:4, stre:3 };
+        app.profiles[id] = p; if (!app.currentProfile) app.currentProfile = id;
+      });
+      save(); hydrateUI(); toast('Démo chargée.');
+    }
+    function hydrateUI() { renderProfiles(); renderGlobalBanner(); renderTraineeForm(); renderFilters(); renderCompetences(); renderLogs(); renderHoursSummary(); renderStars(); renderBilanSummary(); renderDashboard(); renderTeam(); if (!val('log-date')) setVal('log-date', new Date().toISOString().slice(0,10)); }
+    function init() { load(); populateSpecSelect(); hydrateUI(); }
+    init();
+  </script>
+</body>
+</html>
