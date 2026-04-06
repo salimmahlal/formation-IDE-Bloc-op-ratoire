@@ -1010,7 +1010,7 @@ async function loadAdminTab(){
     });
     document.getElementById('admin-stat-users').textContent=(users||[]).length;
     document.getElementById('admin-stat-learners').textContent=totL;
-    document.getElementById('admin-stat-hours').textContent=totH.toFixed(1)+y'h';
+    document.getElementById('admin-stat-hours').textContent=totH.toFixed(1)+'h';
     document.getElementById('admin-stat-pct').textContent=pCnt?Math.round(totP/pCnt)+'%':'0%';
 
     const ulEl=document.getElementById('admin-user-list');
