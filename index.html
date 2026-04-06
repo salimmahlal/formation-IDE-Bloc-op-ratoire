@@ -38,7 +38,7 @@
     .auth-card {
       background: var(--bg-card); border: 1px solid var(--border2);
       border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 420px;
-      text-align: center; box-shadow: 0 24px 80px rgba(0,0,0,.5);
+      text-align: center; box-shadow: 0 24px 80px rgba(0,0,0,0.5);
     }
     .auth-logo { font-size: 48px; margin-bottom: 12px; }
     .auth-card h1 { font-size: 22px; font-weight: 700; color: var(--text); }
@@ -149,7 +149,7 @@
     .tab {
       padding: 10px 18px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
       border: none; background: transparent; color: var(--text-muted); font-size: 13px;
-      font-weight: 500; cursor: p0ointer; transition: all .18s; border-bottom: 2px solid transparent;
+      font-weight: 500; cursor: pointer; transition: all .18s; border-bottom: 2px solid transparent;
       margin-bottom: -1px;
     }
     .tab:hover { color: var(--text); }
@@ -404,14 +404,14 @@
           <div class="section-head">Fiche apprenant / professionnel en parcours</div>
           <div class="form-group"><label>Nom complet</label><input type="text" id="t-name" oninput="autoSave()"></div>
           <div class="form-group"><label>Date d'arrivée</label><input type="date" id="t-arrival" oninput="autoSave()"></div>
-          <div class="form-group"><label>Tuteur référent</label><input type="text" id="t-tutor" oninput="autoSave()"></div>
-          <div class="form-group"><label>Service / pôle</label><input type="text" id="t-service" oninput="autoSave()"></div>
+          <div class="form-group"><label>Tuteur råférent</label><input type="text" id="t-tutor" oninput="autoSave()"></div>
+          <div class="form-group"><label>Service / pìte</label><input type="text" id="t-service" oninput="autoSave()"></div>
           <div class="form-group"><label>Niveau initial</label>
             <select id="t-level" onchange="autoSave()">
               <option value="">— Sélectionner —</option>
               <option value="Débutant">Débutant</option>
               <option value="Intermédiaire">Intermédiaire</option>
-              <option value="Avancé">Avancé</option>
+             <option value="Avancé">Avancé</option>
             </select>
           </div>
           <div class="form-group"><label>Durée prévue (mois)</label><input type="number" id="t-duration" oninput="autoSave()"></div>
@@ -563,7 +563,7 @@ const SPECS = [
     {id:'ctx3',n:"Application des protocoles d'hygiène et d'asepsie"},
     {id:'ctx4',n:"Gestion et rangement du matériel chirurgical"},
     {id:'ctx5',n:"Communication avec l'équipe pluridisciplinaire"},
-    {id:'ctx6',n:"Traçabilité et documentation des actes"}}],
+    {id:'ctx6',n:"Traçabilité et documentation des actes"}]},
   {id:'ORT',badge:'ORTHO',name:'Chirurgie orthopédique',short:'Orthopédie',icon:'🦴',color:'#f59e0b',skills:[
     {id:'ort1',n:"Préparation de la table opératoire en orthopédie"},
     {id:'ort2',n:"Installation du patient et protection des appuis"},
@@ -735,37 +735,43 @@ window.exitViewAs=async function(){
 // ─── PROFILES ─────────────────────────────────────────────
 function makeProfile(id,name,color){
   return{id,name,color,trainee:{name,arrival:'',tutor:'',service:'',level:'',duration:''},
-    skills:{},logs:[],bilan:{strengths:'',improve:'',goals:'};
-    skills:{edt val:val3,pts,maxPts,pct:maxPts?pts/maxPts*100:0,totalHours};
+    skills:{},logs:[],bilan:{strengths:'',improve:'',goals:'',stars:{tech:0,auto:0,rigu:0,comm:0,stre:0}}};
 }
-function levelLabel(pct){if(pct<20)return'Débutant';if(pct<50)return'En progression';if(pct<75)return'Intermédiaire';if(pct<90)return'Avancé';return'Expert';}
+function current(){return appData.profiles[appData.currentProfile]||null;}
 
-// ─── RENDER PROFILES ──────────────────────────────────────
-function renderProfiles(){
-  const wrap=document.getElementById('profiles'),ps=Object.values(appData.profiles);
-  if(!ps.length){wrap.innerHTML='<div class="empty" style="width:100%">Aucun apprenant. Cliquez sur "Nouvel apprenant" pour commencer.</div>';return;}
-  wrap.innerHTML=ps.map(p=>{const s=computeStats(p);const ini=p.name.split(' ').map(x=>x[0]||'').slice(0,2).join('').toUpperCase()||'?';
-    return`<div class="profile-chip ${p.id===appData.currentProfile?'active':''}" style="--chip-color:${p.color}">
-      <div class="avatar" style="background:${p.color}">${ini}</div>
-      <div class="meta" onclick="switchProfile('${p.id}')" style="cursor:pointer">
-        <div class="name">${esc(p.name)}</div>
-        <div class="sub">${Math.round(s.pct)}% · ${s.val} val. · ${s.totalHours.toFixed(1)}h</div>
-      </div><button class="btn btn-sm" onclick="removeProfile('${p.id}')">×</button></div>`;}).join('');
+window.showTab=function(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');
+  if(id==='equipe')renderTeam();
+  if(id==='admin')loadAdminTab();
+};
+
+window.openProfileModal=function(){renderSwatches();document.getElementById('m-name').value='';document.getElementById('profile-modal').classList.add('open');setTimeout(()=>document.getElementById('m-name').focus(),30);};
+window.closeProfileModal=function(){document.getElementById('profile-modal').classList.remove('open');};
+
+function renderSwatches(){
+  selectedColor=COLORS[0];
+  document.getElementById('swatches').innerHTML=COLORS.map((c,i)=>
+    `<div class="swatch ${i===0?'active':''}" style="background:${c}" onclick="pickColor('${c}',this)"></div>`).join('');
 }
+window.pickColor=function(c,el){selectedColor=c;document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');};
+window.confirmProfile=function(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){toast('Renseignez un nom complet.');return;}
+  const id=genId();appData.profiles[id]=makeProfile(id,name,selectedColor);
+  appData.currentProfile=id;save();closeProfileModal();hydrateUI();toast('Profil créé.');
+};
+window.removeProfile=function(id){
+  const p=appData.profiles[id];if(!p)return;
+  if(!confirm('Supprimer le profil de '+p.name+' ?'))return;
+  delete appData.profiles[id];
+  appData.currentProfile=Object.keys(appData.profiles)[0]||null;
+  save();hydrateUI();toast('Profil supprimé.');
+};
+window.switchProfile=function(id){persistInputs();appData.currentProfile=id;save();hydrateUI();};
 
-function renderGlobalBanner(){
-  const ps=Object.values(appData.profiles);
-  const th=ps.reduce((s,p)=>s+computeStats(p).totalHours,0);
-  const mp=ps.length?Math.round(ps.reduce((s,p)=>s+computeStats(p).pct,0)/ps.length):0;
-  document.getElementById('global-total-skills').textContent=TOTAL_SKILLS;
-  document.getElementById('global-learners').textContent=ps.length;
-  document.getElementById('global-team-hours').textContent=th.toFixed(1)+'h';
-  document.getElementById('global-team-pct').textContent=mp+'%';
-}
-
-function renderDashboard(){
-  const p=current();const s=computeStats(p);
-  document.getElementById('ringersistInputs(){
+function persistInputs(){
   const p=current();if(!p)return;
   p.trainee={name:val('t-name'),arrival:val('t-arrival'),tutor:val('t-tutor'),service:val('t-service'),level:val('t-level'),duration:val('t-duration')};
   p.bilan.strengths=val('b-strengths');p.bilan.improve=val('b-improve');p.bilan.goals=val('b-goals');
@@ -907,7 +913,7 @@ function renderHoursSummary(){
   p.logs.forEach(l=>bySpec[l.spec]=(bySpec[l.spec]||0)+(+l.hours||0));
   host.innerHTML<`<div style="display:flex;justify-content:space-between;padding:8px 0 12px;border-bottom:1px solid var(--border);font-weight:700"><span>Total cumulé</span><span style="color:var(--primary)">${total.toFixed(1)}h</span></div>`+
     Object.entries(bySpec).sort((a,b)=>b[1]-a[1]).map(([id,h])=>{const sp=SPECS.find(s=>s.id===id);
-    0 return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><span>${sp?sp.name:id}</span><span>${h.toFixed(1)}h</span></div>`;}).join('');
+      return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><span>${sp?sp.name:id}</span><span>${h.toFixed(1)}h</span></div>`;}).join('');
 }
 
 function renderStars(){
@@ -1004,7 +1010,7 @@ async function loadAdminTab(){
     });
     document.getElementById('admin-stat-users').textContent=(users||[]).length;
     document.getElementById('admin-stat-learners').textContent=totL;
-    document.getElementById('admin-stat-hours').textContent=totH.toFixed(1)+'h';
+    document.getElementById('admin-stat-hours').textContent=totH.toFixed(1)+y'h';
     document.getElementById('admin-stat-pct').textContent=pCnt?Math.round(totP/pCnt)+'%':'0%';
 
     const ulEl=document.getElementById('admin-user-list');
