@@ -634,9 +634,11 @@ sb.auth.onAuthStateChange(async(event,session)=>{
     if(appReady)return;
     appReady=true;
     currentUser=session.user;
-    await loadUserInfo();
-    await loadData();
-    showApp();
+    setTimeout(async()=>{
+      await loadUserInfo();
+      await loadData();
+      showApp();
+    },0);
   }else{
     appReady=false;currentUser=null;currentRole='user';
     showAuthScreen();
