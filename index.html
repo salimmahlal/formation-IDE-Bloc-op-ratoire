@@ -122,34 +122,14 @@
     .banner-info h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
     .banner-info p { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 700px; }
     .banner-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
-    .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); }
-    .stat-value { font-size: 28px; font-weight: 800; color: var(--primary); margin-top: 2px; }
+    .stat-label { font-size: 10px; text-transform: uppercase; letter-spac.map(p=>p.name.split(' ')[0]),colors=profiles.map(p=>p.color+'cc');
+  chart('chart-team-pct','bar',{labels:names,datasets:[{data:profiles.map(p=>Math.round(computeStats(p).pct)),backgroundColor:colors,borderRadius:8}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{min:0,max:100,ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
+  chart('chart-team-hours','bar',{labels:names,datasets:[{data:profiles.map(p=>computeStats(p).totalHours),backgroundColor:colors,borderRadius:8}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
+  const avg=SPECS.slice(0,8).map(sp=>{if(!profiles.length)return 0;return Math.round(profiles.reduce((s,p)=>{const pts=sp.skills.reduce((a,sk)=>a+(p.skills[sk.id]||0),0);return s+(pts/(sp.skills.length*3)*100);},0)/profiles.length);});
+  chart('chart-team-radar','radar',{labels:SPECS.slice(0,8).map(sp=>sp.short),datasets:[{data:avg,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.14)',pointBackgroundColor:'#8b5cf6',borderWidth:2}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{suggestedMin:0,suggestedMax:100,ticks:{stepSize:25,color:'#6f88a7',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#9db2cf'}}}});
+}
 
-    /* PROFILES BAR */
-    .profiles-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
-    .profile-chip {
-      display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 40px; cursor: pointer; transition: all .18s;
-      border-color: var(--chip-color, var(--border));
-    }
-    .profile-chip.active { background: color-mix(in srgb, var(--chip-color) 12%, transparent); border-color: var(--chip-color); }
-    .profile-chip:hover { border-color: var(--chip-color, var(--primary)); }
-    .profile-chip .avatar {
-      width: 30px; height: 30px; border-radius: 50%; display: flex;
-      align-items: center; justify-content: center; font-size: 11px;
-      font-weight: 700; color: #08111e;
-    }
-    .profile-chip .meta { line-height: 1.3; }
-    .profile-chip .name { font-size: 13px; font-weight: 600; }
-    .profile-chip .sub { font-size: 11px; color: var(--text-muted); }
-
-    /* TABS */
-    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; flex-wrap: wrap; }
-    .tab {
-      padding: 10px 18px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-      border: none; background: transparent; color: var(--text-muted); font-size: 13px;
-      font-weight: 500; cursor: pointer; transition: all .18s; border-bottom: 2px solid transparent;
+// ─── Eointer; transition: all .18s; border-bottom: 2px solid transparent;
       margin-bottom: -1px;
     }
     .tab:hover { color: var(--text); }
@@ -264,488 +244,832 @@
     .admin-stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
     .admin-stat-val { font-size: 24px; font-weight: 800; color: var(--primary); }
     .admin-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
-    .admin-stat-sub { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+      align-items: center; justify-content: center; z-index: 500; backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border2); border-radius: 16px;
+      padding: 28px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+    .swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all .15s; }
+    .swatch.active { border-color: #fff; transform: scale(1.15); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    /* MISC */
+    .empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
+    .chart-box { position: relative; height: 220px; }
+    .section-head { font-size: 14px; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .view-as-banner { background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.3); color: #c4b5fd; padding: 10px 18px; border-radius: var(--radius-sm); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+    hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .banner-stats { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+      .topbar-title p { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div id="auth-screen">
-    <div class="auth-card">
-      <div class="auth-logo">🔐</div>
-      <h1>Formation — Bloc opératoire</h1>
-      <p class="auth-sub">Connectez-vous pour accéder</p>
-      <input id="email" type="text" placeholder="Email ou username" />
-      <input id="password" type="password" placeholder="Mot de passe" />
-      <button class="auth-btn" onclick="handleLogin()">Se connecter</button>
-      <div id="auth-error" style="display:none;"></div>
-      <p class="auth-note">Les identifiants par défaut: demo@example.com / demo123</p>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🏥</div>
+    <h1>Pilotage Formation</h1>
+    <p class="auth-sub">Bloc opératoire · Accès sécurisé</p>
+    <div id="auth-error" class="auth-error" style="display:none"></div>
+    <div class="form-group" style="text-align:left">
+      <label>Email professionnel</label>
+      <input type="email" id="login-email" placeholder="prenom.nom@etablissement.fr" autocomplete="email">
     </div>
+    <div class="form-group" style="text-align:left">
+      <label>Mot de passe</label>
+      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="auth-btn" id="login-btn">Se connecter</button>
+    <p class="auth-note">Accès sur invitation uniquement.<br>Contactez l'administrateur pour obtenir vos identifiants.</p>
   </div>
+</div>
 
-  <div id="main-app" style="display:none;">
-    <div class="topbar">
-      <div class="topbar-logo">📊</div>
-      <div class="topbar-title">
-        <h1>Pilotage Formation</h1>
-        <p>Bloc opératoire</p>
+<div id="toast"></div>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none">
+  <header class="topbar">
+    <div class="topbar-logo">🏥</div>
+    <div class="topbar-title">
+      <h1>Pilotage formation — Bloc opératoire</h1>
+      <p>Version professionnelle · Multi-apprenants · Données synchronisées</p>
+    </div>
+    <div class="topbar-actions">
+      <div class="user-badge">
+        <span id="user-name-badge">Utilisateur</span>
+        <span id="user-role-badge" class="role-pill">USER</span>
       </div>
-      <div class="topbar-actions">
-        <div class="user-badge">
-          <div class="avatar"></div>
-          <div class="meta">
-            <span id="user-name">Utilisateur</span>
-            <span class="role-pill" id="user-role">User</span>
-          </div>
-          <button class="btn btn-sm" onclick="handleLogout()">Déconnecter</button>
-        </div>
+      <button class="btn" onclick="exportData()">⬇ Export JSON</button>
+      <button class="btn btn-primary" onclick="openProfileModal()">＋ Nouvel apprenant</button>
+      <button class="btn btn-danger" onclick="doLogout()">⎋ Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <div id="view-as-banner" class="view-as-banner" style="display:none">
+      <span>👁 Vous consultez les données de : <strong id="view-as-name"></strong></span>
+      <button class="btn btn-sm" onclick="exitViewAs()">Revenir à ma vue</button>
+    </div>
+
+    <div class="global-banner">
+      <div class="banner-info">
+        <h2>Tableau de pilotage pédagogique — orientation cadre de santé / qualité</h2>
+        <p>Outil de suivi des acquisitions en bloc opératoire, structuré pour un usage d'encadrement, de tutorat et de pilotage qualité : progression par spécialité, journal des vacations, bilan formatif, vision d'équipe et lecture managériale utile pour la professionnalisation, l'organisation tutorale et la préparation des revues qualité.</p>
+      </div>
+      <div class="banner-stats">
+        <div class="stat-item"><div class="stat-label">Compétences totales</div><div class="stat-value" id="global-total-skills">44</div></div>
+        <div class="stat-item"><div class="stat-label">Apprenants suivis</div><div class="stat-value" id="global-learners">0</div></div>
+        <div class="stat-item"><div class="stat-label">Heures équipe</div><div class="stat-value" id="global-team-hours">0.0h</div></div>
+        <div class="stat-item"><div class="stat-label">Progression moyenne</div><div class="stat-value" id="global-team-pct">0%</div></div>
       </div>
     </div>
 
-    <div class="page-wrap">
-      <div class="global-banner" id="banner" style="display:none;">
-        <div class="banner-info">
-          <h2 id="banner-title">Bienvenue</h2>
-          <p id="banner-message">Sélectionnez votre profil pour commencer</p>
-        </div>
-        <div class="banner-stats">
-          <div>
-            <div class="stat-label">Équipes</div>
-            <div class="stat-value" id="stat-teams">2</div>
-          </div>
-          <div>
-            <div class="stat-label">Compétences</div>
-            <div class="stat-value" id="stat-skills">12</div>
-          </div>
-          <div>
-            <div class="stat-label">Formations</div>
-            <div class="stat-value" id="stat-trainings">8</div>
-          </div>
-          <div>
-            <div class="stat-label">Progression</div>
-            <div class="stat-value" id="stat-progress">67%</div>
-          </div>
-        </div>
-      </div>
+    <div id="profiles" class="profiles-bar"></div>
 
-      <div class="profiles-bar" id="profiles-bar">
-        <!-- Profiles will be inserted here -->
-      </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('dashboard', this)">📊 Dashboard</button>
+      <button class="tab" onclick="showTab('competences', this)">📋 Compétences</button>
+      <button class="tab" onclick="showTab('vacations', this)">⏱ Temps &amp; vacations</button>
+      <button class="tab" onclick="showTab('bilan', this)">📝 Bilan formatif</button>
+      <button class="tab" onclick="showTab('equipe', this)">👥 Vue équipe</button>
+      <button class="tab admin-tab" id="admin-tab-btn" onclick="showTab('admin', this)" style="display:none">🔑 Administration</button>
+    </div>
 
-      <div class="tabs">
-        <button class="tab active" onclick="switchTab('overview')">Vue d'ensemble</button>
-        <button class="tab" onclick="switchTab('competencies')">Compétences</button>
-        <button class="tab" onclick="switchTab('vacations')">Vacations</button>
-        <button class="tab" onclick="switchTab('evaluations')">Évaluations</button>
-        <button class="tab admin-tab" onclick="switchTab('admin')" id="admin-tab" style="display:none;">Admin</button>
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-panel active">
+      <div class="kpi-grid">
+        <div class="kpi-card" style="grid-column:span 1">
+          <div class="ring-wrap"><canvas id="chart-ring" width="80" height="80"></canvas><div class="ring-label" id="ring-pct">0%</div></div>
+          <div style="text-align:center;font-size:11px;color:var(--text-muted)" id="kpi-pts">0 / 132 pts</div>
+        </div>
+        <div class="kpi-card"><span class="kpi-icon">✅</span><div class="kpi-val" id="kpi-val">0</div><div class="kpi-label">Compétences validées</div><div class="kpi-sub">Palier 3</div></div>
+        <div class="kpi-card"><span class="kpi-icon">🔬</span><div class="kpi-val" id="kpi-pra">0</div><div class="kpi-label">En pratique</div><div class="kpi-sub">Palier 2</div></div>
+        <div class="kpi-card"><span class="kpi-icon">👁</span><div class="kpi-val" id="kpi-obs">0</div><div class="kpi-label">Observées</div><div class="kpi-sub">Palier 1</div></div>
+        <div class="kpi-card"><span class="kpi-icon">⏰</span><div class="kpi-val" id="kpi-hours">0h</div><div class="kpi-label">Heures cumulées</div><div class="kpi-sub">Sur le profil actif</div></div>
       </div>
-
-      <div id="overview" class="tab-panel active">
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-val">15</div>
-            <div class="kpi-label">Formations</div>
-            <div class="kpi-icon">📚</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-val">4/8</div>
-            <div class="kpi-label">Compétences</div>
-            <div class="kpi-icon">⭐</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-val">120h</div>
-            <div class="kpi-label">Temps formation</div>
-            <div class="kpi-icon">⏱️</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-val">78%</div>
-            <div class="kpi-label">Progression</div>
-            <div class="kpi-icon">📈</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-val">12</div>
-            <div class="kpi-label">Vacations</div>
-            <div class="kpi-icon">📋</div>
-          </div>
-        </div>
-        <div class="card" style="margin-top:20px;">
-          <div class="card-title">Dernières activités</div>
-          <div class="log-header">
-            <div>Date</div>
-            <div>Action</div>
-            <div>Statut</div>
-            <div>Notes</div>
-            <div></div>
-          </div>
-          <div id="activity-log">
-            <!-- Activity will be inserted here -->
-          </div>
-        </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Progression globale</div><div class="chart-box"><canvas id="chart-stacks"></canvas></div></div>
+        <div class="card"><div class="card-title">Radar par spécialité</div><div class="chart-box"><canvas id="chart-radar"></canvas></div></div>
       </div>
-
-      <div id="competencies" class="tab-panel">
-        <div class="filters" id="competency-filters">
-          <!-- Filters will be inserted here -->
-        </div>
-        <div id="competencies-list">
-          <!-- Competencies will be inserted here -->
-        </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Évolution des vacations</div><div class="chart-box"><canvas id="chart-timeline"></canvas></div></div>
+        <div class="card"><div class="card-title">Score par spécialité</div><div class="chart-box"><canvas id="chart-hbar"></canvas></div></div>
       </div>
+      <div class="card"><div class="card-title">Répartition des heures</div><div class="chart-box" style="height:180px"><canvas id="chart-hours"></canvas></div></div>
+    </div>
 
-      <div id="vacations" class="tab-panel">
+    <!-- COMPETENCES -->
+    <div id="tab-competences" class="tab-panel">
+      <div id="filters" class="filters"></div>
+      <div id="competences"></div>
+    </div>
+
+    <!-- VACATIONS -->
+    <div id="tab-vacations" class="tab-panel">
+      <div class="grid-2">
         <div class="card">
-          <div class="card-title">Gestion des vacations</div>
-          <div class="form-group">
-            <label>Type de vacation</label>
-            <select id="vacation-type" onchange="handleVacationType()">
-              <option value="">-- Sélectionnez --</option>
-              <option value="formation">Formation</option>
-              <option value="evaluation">Évaluation</option>
-              <option value="other">Autre</option>
+          <div class="section-head">Fiche apprenant / professionnel en parcours</div>
+          <div class="form-group"><label>Nom complet</label><input type="text" id="t-name" oninput="autoSave()"></div>
+          <div class="form-group"><label>Date d'arrivée</label><input type="date" id="t-arrival" oninput="autoSave()"></div>
+          <div class="form-group"><label>Tuteur référent</label><input type="text" id="t-tutor" oninput="autoSave()"></div>
+          <div class="form-group"><label>Service / pôle</label><input type="text" id="t-service" oninput="autoSave()"></div>
+          <div class="form-group"><label>Niveau initial</label>
+            <select id="t-level" onchange="autoSave()">
+              <option value="">— Sélectionner —</option>
+              <option value="Débutant">Débutant</option>
+              <option value="Intermédiaire">Intermédiaire</option>
+              <option value="Avancé">Avancé</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Date de début</label>
-            <input id="vacation-start" type="date" />
-          </div>
-          <div class="form-group">
-            <label>Date de fin</label>
-            <input id="vacation-end" type="date" />
-          </div>
-          <div class="form-group">
-            <label>Commentaires</label>
-            <textarea id="vacation-notes" placeholder="Notes supplémentaires..."></textarea>
-          </div>
-          <button class="btn btn-primary" onclick="saveVacation()">Enregistrer</button>
+          <div class="form-group"><label>Durée prévue (mois)</label><input type="number" id="t-duration" oninput="autoSave()"></div>
+          <hr class="sep">
+          <div class="section-head">Ajouter une vacation</div>
+          <div class="form-group"><label>Date</label><input type="date" id="log-date"></div>
+          <div class="form-group"><label>Spécialité</label><select id="log-spec"></select></div>
+          <div class="form-group"><label>Durée (heures)</label><input type="number" id="log-hours" placeholder="7.5" step="0.5"></div>
+          <div class="form-group"><label>Note de vacation</label><textarea id="log-note" placeholder="Interventions observées, actes accompagnés, points pédagogiques..."></textarea></div>
+          <button class="btn btn-primary" onclick="addLog()">Enregistrer la vacation</button>
         </div>
-        <div class="card" style="margin-top:20px;">
-          <div class="card-title">Historique des vacations</div>
-          <table class="team-table">
-            <thead>
-              <tr>
-                <th>Date début</th>
-                <th>Date fin</th>
-                <th>Type</th>
-                <th>Statut</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="vacation-history">
-              <!-- History will be inserted here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="evaluations" class="tab-panel">
-        <div class="card">
-          <div class="card-title">Formulaire d'évaluation</div>
-          <div class="form-group">
-            <label>Évaluateur</label>
-            <input type="text" placeholder="Nom de l'évaluateur" />
-          </div>
-          <div class="form-group">
-            <label>Compétence évaluée</label>
-            <select>
-              <option>-- Sélectionnez --</option>
-              <option>Technique chirurgicale</option>
-              <option>Communication</option>
-              <option>Sécurité patient</option>
-              <option>Travail en équipe</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Note (1-5)</label>
-            <div class="stars">
-              <span class="star" onclick="setRating(1)">★</span>
-              <span class="star" onclick="setRating(2)">★</span>
-              <span class="star" onclick="setRating(3)">★</span>
-              <span class="star" onclick="setRating(4)">★</span>
-              <span class="star" onclick="setRating(5)">★</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Commentaires</label>
-            <textarea placeholder="Retours d'évaluation..."></textarea>
-          </div>
-          <button class="btn btn-primary">Valider l'évaluation</button>
-        </div>
-        <div class="card" style="margin-top:20px;">
-          <div class="card-title">Historique des évaluations</div>
-          <div id="evaluation-history">
-            <!-- Evaluations will be inserted here -->
-          </div>
-        </div>
-      </div>
-
-      <div id="admin" class="tab-panel" style="display:none;">
-        <div class="card">
-          <div class="card-title">Gestion des utilisateurs</div>
-          <button class="btn btn-primary" onclick="showAddUserModal()">+ Ajouter utilisateur</button>
-          <table class="team-table" style="margin-top:20px;">
-            <thead>
-              <tr>
-                <th>Utilisateur</th>
-                <th>Rôle</th>
-                <th>Email</th>
-                <th>Équipe</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="users-list">
-              <!-- Users will be inserted here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="toast"></div>
-
-  <script>
-    // Initialize Supabase
-    const SUPABASE_URL = 'https://rjlbsfirwdbbzmpxhgfi.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbGJzZmlyd2RiYnptcHhoZ2ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDkxMzk0NzAsImV4cCI6MTkyNDcxNTQ3MH0.r-TGlNfPZpJdyUUg1E5Hkp-qUF7RiCKVW8_5P0P-GwA';
-    
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInBrowser: true,
-        storage: window.localStorage,
-        storageKey: 'sb-admin-rjlbsfirwdbbzmpxhgfi'
-      }
-    });
-   
-    let currentUser = null;
-    let currentProfile = null;
-
-    // Authentication
-    async function handleLogin() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) throw error;
-        currentUser = data.user;
-        showApp();
-        await loadUserData();
-      } catch (error) {
-        showError(error.message);
-      }
-    }
-
-    function handleLogout() {
-      supabaseClient.auth.signOut();
-      location.reload();
-    }
-
-    function showError(message) {
-      const errorDiv = document.getElementById('auth-error');
-      errorDiv.textContent = message;
-      errorDiv.style.display = 'block';
-    }
-
-    function showApp() {
-      document.getElementById('auth-screen').style.display = 'none';
-      document.getElementById('main-app').style.display = 'block';
-    }
-
-    function hideApp() {
-      document.getElementById('auth-screen').style.display = 'block';
-      document.getElementById('main-app').style.display = 'none';
-    }
-
-    async function loadUserData() {
-      try {
-        // Load user profile
-        const { data, error } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .single();
-
-        if (data) {
-          currentProfile = data;
-          document.getElementById('user-name').textContent = data.full_name || 'Utilisateur';
-          
-          // Show admin tab if admin
-          if (data.role === 'admin') {
-            document.getElementById('admin-tab').style.display = 'block';
-            loadAdminData();
-          }
-
-          loadProfiles();
-          loadCompetencies();
-          loadVacations();
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      }
-    }
-
-    function loadProfiles() {
-      const bar = document.getElementById('profiles-bar');
-      const profiles = [
-        { name: 'Chirurgien', level: 3, status: 'En cours' },
-        { name: 'Anesthésiste', level: 2, status: 'Complet' },
-        { name: 'IDE', level: 4, status: 'Complet' }
-      ];
-
-      bar.innerHTML = profiles.map(p => `
-        <div class="profile-chip" onclick="switchProfile('${p.name}')">
-          <div class="avatar">${p.name.charAt(0)}</div>
-          <div class="meta">
-            <div class="name">${p.name}</div>
-            <div class="sub">${p.status}</div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function loadCompetencies() {
-      const categories = {
-        'Technique': ['Intubation', 'Ponction', 'Suture', 'Asepsie'],
-        'Communication': ['Transmissions', 'Écoute active', 'Clarté', 'Empathie'],
-        'Sécurité': ['Protocoles', 'Prévention', 'Gestion risques', 'Vigilance'],
-        'Collaboration': ['Travail équipe', 'Responsabilité', 'Adaptabilité', 'Ponctualité']
-      };
-
-      const container = document.getElementById('competencies-list');
-      let html = '';
-
-      Object.entries(categories).forEach(([cat, skills]) => {
-        html += `
+        <div>
           <div class="card">
-            <div class="card-title">${cat}</div>
-            <div style="padding:12px 0;">
-              ${skills.map(skill => `
-                <div class="skill">
-                  <div class="skill-top">
-                    <span class="skill-name">${skill}</span>
-                    <div class="levels">
-                      ${[1,2,3,4,5].map(l => `<div class="lvl" onclick="rateSkill('${skill}', ${l})">${l}</div>`).join('')}
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
+            <div class="section-head">Historique des vacations</div>
+            <div class="log-header"><span>Date</span><span>Spécialité</span><span>Heures</span><span>Note</span><span></span></div>
+            <div id="logs"></div>
           </div>
-        `;
-      });
+          <div class="card">
+            <div class="section-head">Récapitulatif des temps</div>
+            <div id="hours-summary"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      container.innerHTML = html;
-    }
+    <!-- BILAN -->
+    <div id="tab-bilan" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-head">Points forts</div>
+          <div class="form-group"><textarea id="b-strengths" rows="4" placeholder="Compétences consolidées, comportements professionnels, conformité des pratiques..." oninput="autoSave()"></textarea></div>
+          <div class="section-head">Axes d'amélioration</div>
+          <div class="form-group"><textarea id="b-improve" rows="4" placeholder="Situations à renforcer, points de vigilance, écarts observés..." oninput="autoSave()"></textarea></div>
+          <div class="section-head">Objectifs de la prochaine période</div>
+          <div class="form-group"><textarea id="b-goals" rows="4" placeholder="Objectifs concrets, situations ciblées, critères de réussite..." oninput="autoSave()"></textarea></div>
+          <button class="btn btn-primary" onclick="saveBilan()">💾 Sauvegarder le bilan</button>
+        </div>
+        <div class="card">
+          <div class="section-head">Évaluation formative</div>
+          <div class="eval-row"><span>Technicité</span><div id="stars-tech" class="stars"></div></div>
+          <div class="eval-row"><span>Autonomie</span><div id="stars-auto" class="stars"></div></div>
+          <div class="eval-row"><span>Riguiur</span><div id="stars-rigu" class="stars"></div></div>
+          <div class="eval-row"><span>Communication</span><div id="stars-comm" class="stars"></div></div>
+          <div class="eval-row"><span>Gestion du stress</span><div id="stars-stre" class="stars"></div></div>
+          <hr class="sep">
+          <div class="section-head">Synthèse</div>
+          <div id="bilan-summary"><div class="empty">Aucun profil sélectionné.</div></div>
+        </div>
+      </div>
+    </div>
 
-    function loadVacations() {
-      const hist = document.getElementById('vacation-history');
-      const vacations = [
-        { start: '2024-01-15', end: '2024-01-16', type: 'Formation', status: 'Complété' },
-        { start: '2024-02-01', end: '2024-02-03', type: 'Évaluation', status: 'En cours' }
-      ];
+    <!-- EQUIPE -->
+    <div id="tab-equipe" class="tab-panel">
+      <div class="card">
+        <div class="section-head">Comparatif des apprenants</div>
+        <div style="overflow-x:auto">
+          <table class="team-table">
+            <thead><tr><th>Apprenant</th><th>Progression</th><th>Validées</th><th>Pratique</th><th>Observées</th><th>Heures</th><th>Spécialités actives</th><th>Niveau estimé</th></tr></thead>
+            <tbody id="team-body"><tr><td colspan="8" class="empty">Aucun apprenant.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Progression comparée</div><div class="chart-box"><canvas id="chart-team-pct"></canvas></div></div>
+        <div class="card"><div class="card-title">Heures comparées</div><div class="chart-box"><canvas id="chart-team-hours"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">Moyenne équipe par spécialité</div><div class="chart-box"><canvas id="chart-team-radar"></canvas></div></div>
+    </div>
 
-      hist.innerHTML = vacations.map(v => `
-        <tr>
-          <td>${v.start}</td>
-          <td>${v.end}</td>
-          <td>${v.type}</td>
-          <td><span class="pill">${v.status}</span></td>
-          <td><button class="btn btn-sm btn-danger" onclick="deleteVacation()">Supprimer</button></td>
-        </tr>
-      `).join('');
-    }
+    <!-- ADMIN -->
+    <div id="tab-admin" class="tab-panel">
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card"><div class="admin-stat-val" id="admin-stat-users">0</div><div class="admin-stat-label">Utilisateurs actifs</div></div>
+        <div class="admin-stat-card"><div class="admin-stat-val" id="admin-stat-learners">0</div><div class="admin-stat-label">Apprenants total</div></div>
+        <div class="admin-stat-card"><div class="admin-stat-val" id="admin-stat-hours">0h</div><div class="admin-stat-label">Heures totales équipe</div></div>
+        <div class="admin-stat-card"><div class="admin-stat-val" id="admin-stat-pct">0%</div><div class="admin-stat-label">Progression moyenne globale</div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="section-head" style="margin:0;border:none;padding:0">👥 Gestion des utilisateurs</div>
+          <button class="btn btn-primary btn-sm" onclick="openCreateUserModal()">＋ Créer un compte</button>
+        </div>
+        <div id="admin-user-list"><div class="empty">Chargement...</div></div>
+      </div>
+      <div class="card">
+        <div class="section-head">📊 Vue globale — Tous les apprenants</div>
+        <div style="overflow-x:auto">
+          <table class="team-table">
+            <thead><tr><th>Tuteur / Utilisateur</th><th>Apprenant</th><th>Progression</th><th>Validées</th><th>Heures</th><th>Niveau estimé</th><th>Service</th></tr></thead>
+            <tbody id="admin-all-learners"><tr><td colspan="7" class="empty">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-    function loadAdminData() {
-      const usersList = document.getElementById('users-list');
-      const users = [
-        { name: 'Alice Dupont', role: 'Admin', email: 'alice@example.com', team: 'Équipe A' },
-        { name: 'Bob Martin', role: 'User', email: 'bob@example.com', team: 'Équipe B' }
-      ];
+  </div>
+</div>
 
-      usersList.innerHTML = users.map(u => `
-        <tr>
-          <td>
-            <div class="user-list-item" style="display:flex; align-items:center; gap:12px;">
-              <div class="user-avatar">${u.name.charAt(0)}</div>
-              <span>${u.name}</span>
-            </div>
-          </td>
-          <td>
-            ${u.role === 'admin' ? '<span class="user-admin-badge">Admin</span>' : '<span class="user-user-badge">User</span>'}
-          </td>
-          <td>${u.email}</td>
-          <td>${u.team}</td>
-          <td><button class="btn btn-sm" onclick="editUser('${u.name}')">Éditer</button></td>
-        </tr>
-      `).join('');
-    }
+<!-- MODAL: Créer apprenant -->
+<div id="profile-modal" class="modal-overlay">
+  <div class="modal">
+    <h3>Créer un apprenant</h3>
+    <div class="form-group"><label>Nom complet</label><input type="text" id="m-name" placeholder="Dupont Marie"></div>
+    <div class="form-group"><label>Couleur de profil</label><div id="swatches" class="swatches"></div></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeProfileModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmProfile()">Créer le profil</button>
+    </div>
+  </div>
+</div>
 
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      
-      document.getElementById(tabName).classList.add('active');
-      event.target.classList.add('active');
-    }
+<!-- MODAL: Créer utilisateur (admin) -->
+<div id="create-user-modal" class="modal-overlay">
+  <div class="modal">
+    <h3>🔑 Créer un compte utilisateur</h3>
+    <div id="create-user-error" class="auth-error" style="display:none"></div>
+    <div class="form-group"><label>Nom complet</label><input type="text" id="new-user-name" placeholder="Dr. Martin Sophie"></div>
+    <div class="form-group"><label>Email professionnel</label><input type="email" id="new-user-email" placeholder="sophie.martin@hopital.fr"></div>
+    <div class="form-group"><label>Mot de passe temporaire</label><input type="text" id="new-user-pwd" placeholder="Minimum 6 caractères"></div>
+    <div class="form-group"><label>Rôle</label>
+      <select id="new-user-role">
+        <option value="user">Utilisateur (tuteur / IDE)</option>
+        <option value="admin">Administrateur (cadre)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCreateUserModal()">Annuler</button>
+      <button class="btn btn-primary" id="create-user-btn" onclick="doCreateUser()">Créer le compte</button>
+    </div>
+  </div>
+</div>
 
-    function switchProfile(name) {
-      document.querySelectorAll('.profile-chip').forEach(p => p.classList.remove('active'));
-      event.target.closest('.profile-chip').classList.add('active');
-      currentProfile = name;
-      showToast('Profil changé à: ' + name);
-    }
+<script>
+// ─── SUPABASE ─────────────────────────────────────────────
+const SUPABASE_URL     = 'https://rjlbsfirwdbbzmpxhgfi.supabase.co';
+const SUPABASE_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbGJzZmlyd2RiYnptcHhoZ2ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzI2NjUsImV4cCI6MjA5MDk0ODY2NX0.Qn0M_GMPg_6ggpO4urNqvXbP8-pIbMmpJdGnhVkhNL8';
+const SUPABASE_SERVICE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbGJzZmlyd2RiYnptcHhoZ2ZpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTM3MjY2NSwiZXhwIjoyMDkwOTQ4NjY1fQ.KmT-3jsWf4bgKDsELl6MsCxbrWS5_QpBfw73oet7KJM';
 
-    function saveVacation() {
-      showToast('Vacation enregistrée');
-    }
+const sb      = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const sbAdmin = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE, {
+  auth: { autoRefreshToken: false, persistSession: false, storageKey: 'sb-admin-rjlbsfirwdbbzmpxhgfi' }
+});
 
-    function deleteVacation() {
-      showToast('Vacation supprimée');
-    }
+// ─── CONSTANTS ────────────────────────────────────────────
+const SPECS = [
+  {id:'CTX',badge:'TRANS',name:'Compétences transversales',short:'Transv.',icon:'🏥',color:'#3b82f6',skills:[
+    {id:'ctx1',n:"Accueil et installation du patient au bloc opératoire"},
+    {id:'ctx2',n:"Vérification de l'identité et du dossier patient"},
+    {id:'ctx3',n:"Application des protocoles d'hygiène et d'asepsie"},
+    {id:'ctx4',n:"Gestion et rangement du matériel chirurgical"},
+    {id:'ctx5',n:"Communication avec l'équipe pluridisciplinaire"},
+    {id:'ctx6',n:"Traçabilité et documentation des actes"}]},
+  {id:'ORT',badge:'ORTHO',name:'Chirurgie orthopédique',short:'Orthopédie',icon:'🦴',color:'#f59e0b',skills:[
+    {id:'ort1',n:"Préparation de la table opératoire en orthopédie"},
+    {id:'ort2',n:"Installation du patient et protection des appuis"},
+    {id:'ort3',n:"Instrumentation pour ostéosynthèse"},
+    {id:'ort4',n:"Gestion du matériel d'implants et prothèses"},
+    {id:'ort5',n:"Assistance en arthroplastie"},
+    {id:'ort6',n:"Traçabilité des implants"}]},
+  {id:'VIS',badge:'VISC',name:'Chirurgie viscérale',short:'Viscérale',icon:'🔬',color:'#10b981',skills:[
+    {id:'vis1',n:"Instrumentation laparoscopique de base"},
+    {id:'vis2',n:"Préparation du système d'insufflation"},
+    {id:'vis3',n:"Assistance en cholécystectomie laparoscopique"},
+    {id:'vis4',n:"Gestion de l'hémostase électrique"},
+    {id:'vis5',n:"Assistance en chirurgie colorectale"},
+    {id:'vis6',n:"Conversion laparoscopie vers laparotomie"}]},
+  {id:'URO',badge:'URO',name:'Chirurgie urologique',short:'Urologie',icon:'🔵',color:'#8b5cf6',skills:[
+    {id:'uro1',n:"Instrumentation en endoscopie urologique"},
+    {id:'uro2',n:"Préparation du matériel de résection"},
+    {id:'uro3',n:"Assistance en néphrectomie laparoscopique"},
+    {id:'uro4',n:"Gestion des systèmes d'irrigation"},
+    {id:'uro5',n:"Assistance en cystectomie et reconstruction"}]},
+  {id:'VAS',badge:'VASC',name:'Chirurgie vasculaire',short:'Vasculaire',icon:'🩸',color:'#ef4444',skills:[
+    {id:'vas1',n:"Préparation du matériel de chirurgie artérielle"},
+    {id:'vas2',n:"Assistance en endartériectomie carotidienne"},
+    {id:'vas3',n:"Gestion des prothèses vasculaires"},
+    {id:'vas4',n:"Instrumentation pour pontage"},
+    {id:'vas5',n:"Assistance en chirurgie veineuse"}]},
+  {id:'STE',badge:'STÉR',name:'Stérilisation et hygiène',short:'Stéril.',icon:'🧼',color:'#06b6d4',skills:[
+    {id:'ste1',n:"Pré-désinfection et décontamination du matériel"},
+    {id:'ste2',n:"Processus de stérilisation vapeur"},
+    {id:'ste3',n:"Contrôle et traçabilité des cycles"},
+    {id:'ste4',n:"Gestion des dispositifs à usage unique"},
+    {id:'ste5',n:"Conditionnement et stockage du matériel stérile"},
+    {id:'ste6',n:"Précautions standard et complémentaires"}]},
+  {id:'GYN',badge:'GYN',name:'Chirurgie gynécologique',short:'Gynéco',icon:'🌸',color:'#a855f7',skills:[
+    {id:'gyn1',n:"Installation en position gynécologique"},
+    {id:'gyn2',n:"Instrumentation en cœlioscopie gynécologique"},
+    {id:'gyn3',n:"Assistance en hystéroscopie opératoire"},
+    {id:'gyn4',n:"Assistance en chirurgie des annexes"},
+    {id:'gyn5',n:"Assistance en hystérectomie"}]},
+  {id:'ANE',badge:'ANES',name:'Aide anesthésie',short:'Anesth.',icon:'💉',color:'#94a3b8',skills:[
+    {id:'ane1',n:"Préparation du chariot d'anesthésie"},
+    {id:'ane2',n:"Assistance à l'induction anesthésique"},
+    {id:'ane3',n:"Surveillance peropératoire des paramètres vitaux"},
+    {id:'ane4',n:"Gestion des voies veineuses et perfusions"},
+    {id:'ane5',n:"Assistance en anesthésie loco-régionale"}]}
+];
+const TOTAL_SKILLS = SPECS.reduce((s,sp)=>s+sp.skills.length,0);
+const COLORS = ['#22c7d8','#10b981','#f59e0b','#8b5cf6','#ef4444','#ec4899','#6366f1','#f97316','#84cc16','#a855f7'];
 
-    function rateSkill(skill, level) {
-      showToast(`${skill} noté: ${level}/5`);
-    }
+// ─── STATE ────────────────────────────────────────────────
+let currentUser=null, currentRole='user', currentUserInfo=null;
+let appData={currentProfile:null,profiles:{}};
+let activeFilter='ALL', selectedColor=COLORS[0];
+let charts={}, saveTimeout=null;
+let viewAsUid=null, viewAsName=null, appReady=false;
 
-    function setRating(level) {
-      document.querySelectorAll('.star').forEach((s, i) => {
-        s.classList.toggle('on', i < level);
-      });
-    }
+// ─── UTILS ────────────────────────────────────────────────
+function genId(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function val(id){const e=document.getElementById(id);return e?e.value:'';}
+function setVal(id,v){const e=document.getElementById(id);if(e)e.value=v||'';}
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2800);}
+function showErr(el,msg){el.textContent=msg;el.style.display='block';}
 
-    function showAddUserModal() {
-      showToast('Modal d\'ajout utilisateur');
-    }
+// ─── AUTH ─────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(session&&session.user){
+    if(appReady)return;
+    appReady=true;
+    currentUser=session.user;
+    await loadUserInfo();
+    await loadData();
+    showApp();
+  }else{
+    appReady=false;currentUser=null;currentRole='user';
+    showAuthScreen();
+  }
+});
 
-    function editUser(name) {
-      showToast('Édition de: ' + name);
-    }
+window.doLogin=async function(){
+  const email=val('login-email').trim(),pwd=val('login-pwd');
+  const errEl=document.getElementById('auth-error'),btn=document.getElementById('login-btn');
+  errEl.style.display='none';
+  if(!email||!pwd){showErr(errEl,'Email et mot de passe requis.');return;}
+  btn.disabled=true;btn.textContent='Connexion…';
+  const{error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){
+    btn.disabled=false;btn.textContent='Se connecter';
+    const m=error.message;
+    showErr(errEl,
+      m.includes('Invalid login')||m.includes('invalid_credentials')?'Email ou mot de passe incorrect.':
+      m.includes('Email not confirmed')?'Compte non confirmé. Contactez l\'administrateur.':
+      'Erreur : '+m);
+  }
+};
 
-    function handleVacationType() {
-      const type = document.getElementById('vacation-type').value;
-      showToast('Type sélectionné: ' + type);
-    }
+window.doLogout=async function(){appReady=false;await sb.auth.signOut();};
 
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3000);
-    }
+document.getElementById('login-btn').addEventListener('click',doLogin);
+document.getElementById('login-pwd').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pwd').focus();});
 
-    // Check auth status on load
-    window.addEventListener('load', async () => {
-      const { data } = await supabaseClient.auth.getSession();
-      if (data.session) {
-        currentUser = data.session.user;
-        showApp();
-        await loadUserData();
-      }
+// ─── USER INFO ────────────────────────────────────────────
+async function loadUserInfo(){
+  const{data}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  if(data){currentUserInfo=data;currentRole=data.role||'user';}
+  else{
+    currentUserInfo={email:currentUser.email,full_name:currentUser.email,role:'user'};
+    currentRole='user';
+    await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,
+      full_name:currentUser.user_metadata?.full_name||currentUser.email,role:'user'});
+  }
+}
+
+function showApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  const name=currentUserInfo?.full_name||currentUserInfo?.email||currentUser.email;
+  document.getElementById('user-name-badge').textContent=name;
+  document.getElementById('user-role-badge').textContent=currentRole==='admin'?'ADMIN':'TUTEUR';
+  if(currentRole==='admin')document.getElementById('admin-tab-btn').style.display='';
+  populateSpecSelect();hydrateUI();
+  if(currentRole==='admin')loadAdminTab();
+}
+
+function showAuthScreen(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').textContent='Se connecter';
+}
+
+// ─── DATA ─────────────────────────────────────────────────
+async function loadData(targetUid){
+  const uid2=targetUid||currentUser.id;
+  const{data}=await sb.from('user_data').select('data').eq('user_id',uid2).single();
+  appData=data?.data||{currentProfile:null,profiles:{}};
+  if(!appData.profiles)appData.profiles={};
+  if(!appData.currentProfile||!appData.profiles[appData.currentProfile])
+    appData.currentProfile=Object.keys(appData.profiles)[0]||null;
+}
+
+function save(){
+  if(!currentUser||viewAsUid)return;
+  clearTimeout(saveTimeout);
+  saveTimeout=setTimeout(async()=>{
+    const{error}=await sb.from('user_data').upsert(
+      {user_id:currentUser.id,data:appData,updated_at:new Date().toISOString()},
+      {onConflict:'user_id'});
+    if(error)console.error('Save:',error);
+  },800);
+}
+
+// ─── VIEW AS (ADMIN) ──────────────────────────────────────
+window.viewAsUser=async function(uid2,name){
+  if(currentRole!=='admin')return;
+  viewAsUid=uid2;viewAsName=name;
+  await loadData(uid2);
+  document.getElementById('view-as-banner').style.display='flex';
+  document.getElementById('view-as-name').textContent=name;
+  hydrateUI();showTab('dashboard',document.querySelector('.tab'));
+};
+window.exitViewAs=async function(){
+  viewAsUid=null;viewAsName=null;
+  document.getElementById('view-as-banner').style.display='none';
+  await loadData();hydrateUI();
+};
+
+// ─── PROFILES ─────────────────────────────────────────────
+function makeProfile(id,name,color){
+  return{id,name,color,trainee:{name,arrival:'',tutor:'',service:'',level:'',duration:''},
+    skills:{},logs:[],bilan:{strengths:'',improve:'',goals:',sv�s:{tech:0,auto:0,rigu:0,comm:0,stre:0}}};
+}
+function current(){return appData.profiles[appData.currentProfile]||null;}
+
+window.showTab=function(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');
+  if(id==='equipe')renderTeam();
+  if(id==='admin')loadAdminTab();
+};
+
+window.openProfileModal=function(){renderSwatches();document.getElementById('m-name').value='';document.getElementById('profile-modal').classList.add('open');setTimeout(()=>document.getElementById('m-name').focus(),30);};
+window.closeProfileModal=function(){document.getElementById('profile-modal').classList.remove('open');};
+
+function renderSwatches(){
+  selectedColor=COLORS[0];
+  document.getElementById('swatches').innerHTML=COLORS.map((c,i)=>
+    `<div class="swatch ${i===0?'active':''}" style="background:${c}" onclick="pickColor('${c}',this)"></div>`).join('');
+}
+window.pickColor=function(c,el){selectedColor=c;document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');};
+window.confirmProfile=function(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){toast('Renseignez un nom complet.');return;}
+  const id=genId();appData.profiles[id]=makeProfile(id,name,selectedColor);
+  appData.currentProfile=id;save();closeProfileModal();hydrateUI();toast('Profil créé.');
+};
+window.removeProfile=function(id){
+  const p=appData.profiles[id];if(!p)return;
+  if(!confirm('Supprimer le profil de '+p.name+' ?'))return;
+  delete appData.profiles[id];
+  appData.currentProfile=Object.keys(appData.profiles)[0]||null;
+  save();hydrateUI();toast('Profil supprimé.');
+};
+window.switchProfile=function(id){persistInputs();appData.currentProfile=id;save();hydrateUI();};
+
+function persistInputs(){
+  const p=current();if(!p)return;
+  p.trainee={name:val('t-name'),arrival:val('t-arrival'),tutor:val('t-tutor'),service:val('t-service'),level:val('t-level'),duration:val('t-duration')};
+  p.bilan.strengths=val('b-strengths');p.bilan.improve=val('b-improve');p.bilan.goals=val('b-goals');
+}
+window.autoSave=function(){persistInputs();save();renderTeam();renderBilanSummary();};
+window.saveBilan=function(){autoSave();toast('Bilan sauvegardé.');};
+
+// ─── STATS ────────────────────────────────────────────────
+function computeStats(profile){
+  const p=profile||current();
+  if(!p)return{obs:0,pra:0,val:0,pts:0,maxPts:TOTAL_SKILLS*3,pct:0,totalHours:0};
+  let obs=0,pra=0,val3=0,pts=0;
+  SPECS.forEach(sp=>sp.skills.forEach(sk=>{const v=p.skills[sk.id]||0;if(v===1)obs++;if(v===2)pra++;if(v===3)val3++;pts+=v;}));
+  const maxPts=TOTAL_SKILLS*3;
+  const totalHours=(p.logs||[]).reduce((s,l)=>s+(+l.hours||0),0);
+  return{obs,pra,val:val3,pts,maxPts,pct:maxPts?pts/maxPts*100:0,totalHours};
+}
+function levelLabel(pct){if(pct<20)return'Débutant';if(pct<50)return'En progression';if(pct<75)return'Intermédiaire';if(pct<90)return'Avancé';return'Expert';}
+
+// ─── RENDER PROFILES ──────────────────────────────────────
+function renderProfiles(){
+  const wrap=document.getElementById('profiles'),ps=Object.values(appData.profiles);
+  if(!ps.length){wrap.innerHTML='<div class="empty" style="width:100%">Aucun apprenant. Cliquez sur "Nouvel apprenant" pour commencer.</div>';return;}
+  wrap.innerHTML=ps.map(p=>{const s=computeStats(p);const ini=p.name.split(' ').map(x=>x[0]||'').slice(0,2).join('').toUpperCase()||'?';
+    return`<div class="profile-chip ${p.id===appData.currentProfile?'active':''}" style="--chip-color:${p.color}">
+      <div class="avatar" style="background:${p.color}">${ini}</div>
+      <div class="meta" onclick="switchProfile('${p.id}')" style="cursor:pointer">
+        <div class="name">${esc(p.name)}</div>
+        <div class="sub">${Math.round(s.pct)}% · ${s.val} val. · ${s.totalHours.toFixed(1)}h</div>
+      </div><button class="btn btn-sm" onclick="removeProfile('${p.id}')">×</button></div>`;}).join('');
+}
+
+function renderGlobalBanner(){
+  const ps=Object.values(appData.profiles);
+  const th=ps.reduce((s,p)=>s+computeStats(p).totalHours,0);
+  const mp=ps.length?Math.round(ps.reduce((s,p)=>s+computeStats(p).pct,0)/ps.length):0;
+  document.getElementById('global-total-skills').textContent=TOTAL_SKILLS;
+  document.getElementById('global-learners').textContent=ps.length;
+  document.getElementById('global-team-hours').textContent=th.toFixed(1)+'h';
+  document.getElementById('global-team-pct').textContent=mp+'%';
+}
+
+function renderDashboard(){
+  const p=current();const s=computeStats(p);
+  document.getElementById('ring-pct').textContent=Math.round(s.pct)+'%';
+  document.getElementById('kpi-pts').textContent=s.pts+' / '+s.maxPts+' pts';
+  document.getElementById('kpi-val').textContent=s.val;
+  document.getElementById('kpi-pra').textContent=s.pra;
+  document.getElementById('kpi-obs').textContent=s.obs;
+  document.getElementById('kpi-hours').textContent=(s.totalHours%1===0?s.totalHours.toFixed(0):s.totalHours.toFixed(1))+'h';
+  renderCharts();
+}
+
+function renderFilters(){
+  document.getElementById('filters').innerHTML=
+    `<button class="filter ${activeFilter==='ALL'?'active':''}" onclick="setFilter('ALL')">Toutes (${TOTAL_SKILLS})</button>`+
+    SPECS.map(sp=>`<button class="filter ${activeFilter===sp.id?'active':''}" onclick="setFilter('${sp.id}')">${sp.icon} ${sp.short}</button>`).join('');
+}
+window.setFilter=function(id){activeFilter=id;renderFilters();renderCompetences();};
+
+function renderCompetences(){
+  const p=current(),skills=p?p.skills:{};
+  const src=activeFilter==='ALL'?SPECS:SPECS.filter(sp=>sp.id===activeFilter);
+  const host=document.getElementById('competences');
+  if(!p){host.innerHTML='<div class="empty">Aucun profil sélectionné.</div>';return;}
+  host.innerHTML=src.map(sp=>{
+    const done=sp.skills.filter(sk=>skills[sk.id]===3).length;
+    const pts=sp.skills.reduce((s,sk)=>s+(skills[sk.id]||0),0);
+    const pct=Math.round(pts/(sp.skills.length*3)*100);
+    return`<div class="spec-block">
+      <div class="spec-head" style="--spec-color:${sp.color}">
+        <div style="font-size:20px">${sp.icon}</div>
+        <div class="spec-badge" style="background:${sp.color}22;color:${sp.color}">${sp.badge}</div>
+        <div class="spec-title">${sp.name}</div>
+        <div class="spec-right"><span>${done}/${sp.skills.length} validées</span>
+          <div class="progress"><span style="width:${pct}%;background:${sp.color}"></span></div><span>${pct}%</span></div>
+      </div>
+      <div class="skills">${sp.skills.map(sk=>{const v=skills[sk.id]||0;
+        const lbl=v===1?'Observée':v===2?'Pratiquée':v===3?'Validée':'Non commencée';
+        return`<div class="skill"><div class="skill-top">
+          <div class="skill-name">${esc(sk.n)}</div>
+          <div class="levels">
+            <button class="lvl ${v>=1?'active':''}" onclick="setSkill('${sk.id}',1)" title="Observée">O</button>
+            <button class="lvl ${v>=2?'active':''}" onclick="setSkill('${sk.id}',2)" title="Pratiquée">P</button>
+            <button class="lvl ${v>=3?'active':''}" onclick="setSkill('${sk.id}',3)" title="Validée">V</button>
+          </div></div><div class="skill-status">Statut : ${lbl}</div></div>`;}).join('')}
+      </div></div>`;}).join('');
+}
+window.setSkill=function(skillId,palier){
+  const p=current();if(!p)return;
+  const cur=p.skills[skillId]||0,nv=cur===palier?palier-1:palier;
+  if(nv<=0)delete p.skills[skillId];else p.skills[skillId]=nv;
+  save();renderCompetences();renderDashboard();renderTeam();renderGlobalBanner();renderBilanSummary();
+};
+
+function renderTraineeForm(){
+  const p=current();
+  if(!p){['t-name','t-arrival','t-tutor','t-service','t-level','t-duration','b-strengths','b-improve','b-goals'].forEach(id=>setVal(id,''));return;}
+  setVal('t-name',p.trainee.name);setVal('t-arrival',p.trainee.arrival);setVal('t-tutor',p.trainee.tutor);
+  setVal('t-service',p.trainee.service);setVal('t-level',p.trainee.level);setVal('t-duration',p.trainee.duration);
+  setVal('b-strengths',p.bilan.strengths);setVal('b-improve',p.bilan.improve);setVal('b-goals',p.bilan.goals);
+}
+
+function populateSpecSelect(){
+  document.getElementById('log-spec').innerHTML='<option value="">— Sélectionner —</option>'+
+    SPECS.map(sp=>`<option value="${sp.id}">${sp.icon} ${sp.name}</option>`).join('');
+}
+
+window.addLog=function(){
+  const p=current();if(!p){toast("Créez d'abord un profil.");return;}
+  const date=val('log-date'),spec=val('log-spec'),hours=parseFloat(val('log-hours')),note=val('log-note').trim();
+  if(!date||!spec||!hours){toast('Date, spécialité et durée sont obligatoires.');return;}
+  if(!p.logs)p.logs=[];
+  p.logs.push({id:genId(),date,spec,hours,note});
+  save();setVal('log-hours','');setVal('log-note','');
+  renderLogs();renderHoursSummary();renderDashboard();renderTeam();renderGlobalBanner();toast('Vacation enregistrée.');
+};
+window.deleteLog=function(id){
+  const p=current();if(!p)return;p.logs=(p.logs||[]).filter(l=>l.id!==id);
+  save();renderLogs();renderHoursSummary();renderDashboard();renderTeam();renderGlobalBanner();
+};
+
+function renderLogs(){
+  const p=current(),host=document.getElementById('logs');
+  if(!p||!(p.logs||[]).length){host.innerHTML='<div class="empty">Aucune vacation enregistrée.</div>';return;}
+  const sorted=[...p.logs].sort((a,b)=>b.date.localeCompare(a.date));
+  host.innerHTML=sorted.map(log=>{const sp=SPECS.find(s=>s.id===log.spec);
+    return`<div class="log-row"><span>${log.date}</span>
+      <span><span class="pill" style="background:${sp?sp.color+'22':'#3b82f622'};color:${sp?sp.color:'#3b82f6'}">${sp?sp.badge:log.spec}</span></span>
+      <span>${log.hours}h</span>
+      <span title="${esc(log.note)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${esc(log.note||'')}</span>
+      <button class="btn btn-sm btn-danger" onclick="deleteLog('${log.id}')">🗑</button></div>`;}).join('');
+}
+
+function renderHoursSummary(){
+  const p=current(),host=document.getElementById('hours-summary');
+  if(!p||!(p.logs||[]).length){host.innerHTML='<div class="empty">Aucune vacation enregistrée.</div>';return;}
+  const total=p.logs.reduce((s,l)=>s+(+l.hours||0),0),bySpec={};
+  p.logs.forEach(l=>bySpec[l.spec]=(bySpec[l.spec]||0)+(+l.hours||0));
+  host.innerHTML<`<div style="display:flex;justify-content:space-between;padding:8px 0 12px;border-bottom:1px solid var(--border);font-weight:700"><span>Total cumulé</span><span style="color:var(--primary)">${total.toFixed(1)}h</span></div>`+
+    Object.entries(bySpec).sort((a,b)=>b[1]-a[1]).map(([id,h])=>{const sp=SPECS.find(s=>s.id===id);
+      return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><span>${sp?sp.name:id}</span><span>${h.toFixed(1)}h</span></div>`;}).join('');
+}
+
+function renderStars(){
+  const p=current();
+  ['tech','auto','rigu','comm','stre'].forEach(key=>{
+    const wrap=document.getElementById('stars-'+key),value=p?(p.bilan.stars[key]||0):0;
+    wrap.innerHTML=Array.from({length:5},(_,i)=>`<span class="star ${i<value?'on':''}" onclick="setStar('${key}',${i+1})">★</span>`).join('');
+  });
+}
+window.setStar=function(key,value){
+  const p=current();if(!p)return;p.bilan.stars[key]=p.bilan.stars[key]===value?0:value;
+  save();renderStars();renderBilanSummary();
+};
+
+function renderBilanSummary(){
+  const p=current(),host=document.getElementById('bilan-summary');
+  if(!p){host.innerHTML='<div class="empty">Aucun profil sélectionné.</div>';return;}
+  const s=computeStats(p),stars=Object.values(p.bilan.stars||{});
+  const avg=stars.length?stars.reduce((a,b)=>a+b,0)/stars.length:0;
+  host.innerHTML=`
+    <div class="eval-row"><span>Progression</span><strong style="color:var(--primary)">${Math.round(s.pct)}%</strong></div>
+    <div class="eval-row"><span>Compétences validées</span><strong style="color:var(--success)">${s.val}/${TOTAL_SKILLS}</strong></div>
+    <div class="eval-row"><span>Évaluation moyenne</span><strong style="color:var(--warning)">${avg.toFixed(1)}/5</strong></div>
+    <div class="eval-row"><span>Niveau estimé</span><strong style="color:var(--violet)">${levelLabel(s.pct)}</strong></div>`;
+}
+
+function renderTeam(){
+  const host=document.getElementById('team-body'),profiles=Object.values(appData.profiles);
+  if(!profiles.length){host.innerHTML='<tr><td colspan="8" class="empty">Aucun apprenant.</td></tr>';updateTeamCharts([]);return;}
+  host.innerHTML=profiles.map(p=>{const s=computeStats(p);
+    const as=SPECS.filter(sp=>sp.skills.some(sk=>p.skills[sk.id])).length;
+    return`<tr><td>${esc(p.name)}</td><td>${Math.round(s.pct)}%</td>
+      <td style="color:var(--success)">${s.val}</td><td style="color:var(--orange)">${s.pra}</td>
+      <td style="color:var(--warning)">${s.obs}</td><td style="color:var(--violet)">${s.totalHours.toFixed(1)}h</td>
+      <td>${as}/${SPECS.length}</td><td>${levelLabel(s.pct)}</td></tr>`;}).join('');
+  updateTeamCharts(profiles);
+}
+
+// ─── CHARTS ───────────────────────────────────────────────
+function chart(id,type,data,options){
+  const c=document.getElementById(id);if(!c)return;
+  if(charts[id]){charts[id].data=data;charts[id].options=options;charts[id].update();return charts[id];}
+  charts[id]=new Chart(c.getContext('2d'),{type,data,options});return charts[id];
+}
+
+function renderCharts(){
+  const p=current(),s=computeStats(p),sk=p?p.skills:{};
+  chart('chart-ring','doughnut',{datasets:[{data:[s.pct,100-s.pct],backgroundColor:['#22c7d8','#10213a'],borderWidth:0}]},{cutout:'78%',plugins:{legend:{display:false},tooltip:{enabled:false}}});
+  const rd=SPECS.slice(0,8).map(sp=>{const pts=sp.skills.reduce((sum,x)=>sum+(sk[x.id]||0),0);return Math.round(pts/(sp.skills.length*3)*100);});
+  chart('chart-radar','radar',{labels:SPECS.slice(0,8).map(sp=>sp.short),datasets:[{data:rd,borderColor:'#22c7d8',backgroundColor:'rgba(34,199,216,.14)',pointBackgroundColor:'#22c7d8',borderWidth:2}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{suggestedMin:0,suggestedMax:100,ticks:{stepSize:25,color:'#6f88a7',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#9db2cf'}}}});
+  const labels=SPECS.map(sp=>sp.short);
+  chart('chart-stacks','bar',{labels,datasets:[
+    {label:'Observé',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===1).length),backgroundColor:'rgba(245,158,11,.72)',Stack:'s'},
+    {label:'Pratique',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===2).length),backgroundColor:'rgba(249,115,22,.72)',stack:'s'},
+    {label:'Validé',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===3).length),backgroundColor:'rgba(16,185,129,.72)',stack:'s'}
+  ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9db2cf'}}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
+  const logs=p?[...(p.logs||[])].sort((a,b)=>a.date.localeCompare(b.date)):[];
+  let ch=0;
+  chart('chart-timeline','line',{labels:logs.map(l=>l.date.slice(5)),datasets:[{data:logs.map(l=>{ch+=+l.hours||0;return Math.round(ch*10)/10;}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.12)',fill:true,tension:.3,pointRadius:3}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
+  chart('chart-hbar','bar',{labels,datasets:[{data:SPECS.map(sp=>{const pts=sp.skills.reduce((s,x)=>s+(sk[x.id]||0),0);return Math.round(pts/(sp.skills.length*3)*100);}),backgroundColor:SPECS.map(sp=>sp.color+'cc'),borderRadius:8}]},{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#89a1bf'},grid:{display:false}}}});
+  const bs={};if(p)(p.logs||[]).forEach(l=>bs[l.spec]=(bs[l.spec]||0)+(+l.hours||0));
+  const hids=Object.keys(bs);
+  chart('chart-hours','doughnut',{labels:hids.map(id=>(SPECS.find(sp=>sp.id===id)||{}).short||id),datasets:[{data:hids.map(id=>bs[id]),backgroundColor:hids.map(id=>((SPECS.find(sp=>sp.id===id)||{}).color||'#3b82f6')+'cc'),borderColor:'#0f1e33',borderWidth:1}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#9db2cf',boxWidth:14}}}});
+}
+
+function updateTeamCharts(profiles){
+  const names=profiles.map(p=>p.name.split(' ')[0]),colors=profiles.map(p=>p.color+'cc');
+  chart('chart-team-pct','bar',{labels:names,datasets:[{data:profiles.map(p=>Math.round(computeStats(p).pct)),backgroundColor:colors,borderRadius:8}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{min:0,max:100,ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
+  chart('chart-team-hours','bar',{labels:names,datasets:[{data:profiles.map(p=>computeStats(p).totalHours),backgroundColor:colors,borderRadius:8}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
+  const avg=SPECS.slice(0,8).map(sp=>{if(!profiles.length)return 0;return Math.round(profiles.reduce((s,p)=>{const pts=sp.skills.reduce((a,sk)=>a+(p.skills[sk.id]||0),0);return s+(pts/(sp.skills.length*3)*100);},0)/profiles.length);});
+  chart('chart-team-radar','radar',{labels:SPECS.slice(0,8).map(sp=>sp.short),datasets:[{data:avg,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.14)',pointBackgroundColor:'#8b5cf6',borderWidth:2}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{suggestedMin:0,suggestedMax:100,ticks:{stepSize:25,color:'#6f88a7',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#9db2cf'}}}});
+}
+
+// ─── EXPORT ───────────────────────────────────────────────
+window.exportData=function(){
+  const blob=new Blob([JSON.stringify(appData,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='pilotage-bloc-operatoire.json';a.click();
+  URL.revokeObjectURL(url);toast('Export téléchargé.');
+};
+
+// ─── ADMIN: LOAD ──────────────────────────────────────────
+async function loadAdminTab(){
+  if(currentRole!=='admin')return;
+  try{
+    const{data:users,error:e1}=await sb.from('profiles').select('*');
+    if(e1)throw e1;
+    const{data:rows,error:e2}=await sb.from('user_data').select('*');
+    if(e2)throw e2;
+
+    const allUD={};let totL=0,totH=0,totP=0,pCnt=0;
+    (rows||[]).forEach(r=>{const d=r.data||{};allUD[r.user_id]=d;
+      Object.values(d.profiles||{}).forEach(p=>{const s=computeStats(p);totL++;totH+=s.totalHours;totP+=s.pct;pCnt++;});
     });
-  </script>
+    document.getElementById('admin-stat-users').textContent=(users||[]).length;
+    document.getElementById('admin-stat-learners').textContent=totL;
+    document.getElementById('admin-stat-hours').textContent=totH.toFixed(1)+'h';
+    document.getElementById('admin-stat-pct').textContent=pCnt?Math.round(totP/pCnt)+'%':'0%';
+
+    const ulEl=document.getElementById('admin-user-list');
+    if(!users||!users.length){ulEl.innerHTML='<div class="empty">Aucun utilisateur enregistré.</div>';}
+    else{ulEl.innerHTML=users.map(u=>{
+      const ud=allUD[u.id]||{profiles:{}},ps=Object.values(ud.profiles||{});
+      const th=ps.reduce((s,p)=>s+computeStats(p).totalHours,0);
+      const mp=ps.length?Math.round(ps.reduce((s,p)=>s+computeStats(p).pct,0)/ps.length):0;
+      const dn=u.full_name||u.email||'?';
+      const ini=dn.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+      return`<div class="user-list-item">
+        <div class="user-avatar">${ini}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${esc(dn)}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${esc(u.email)} · ${ps.length} apprenant(s) · ${th.toFixed(1)}h · ${mp}% moy.</div>
+        </div>
+        <span class="${u.role==='admin'?'user-admin-badge':'user-user-badge'}">${u.role==='admin'?'Admin':'Tuteur'}</span>
+        <button class="btn btn-sm btn-success" onclick="viewAsUser('${u.id}','${esc(dn)}')">👁 Consulter</button>
+      </div>`; }).join('');}
+
+    const leEl=document.getElementById('admin-all-learners'),rws=[];
+    (users||[]).forEach(u=>{const ud=allUD[u.id]||{profiles:{}};
+      Object.values(ud.profiles||{}).forEach(p=>{rws.push({un:u.full_name||u.email,profile:p,stats:computeStats(p)});});});
+    if(!rws.length){leEl.innerHTML='<tr><td colspan="7" class="empty">Aucun apprenant enregistré.</td></tr>';}
+    else{leEl.innerHTML=rws.map(r=>`<tr>
+      <td style="color:var(--text-muted);font-size:12px">${esc(r.un)}</td>
+      <td style="font-weight:600">${esc(r.profile.name)}</td>
+      <td>${Math.round(r.stats.pct)}%</td>
+      <td style="color:var(--success)">${r.stats.val}</td>
+      <td style="color:var(--violet)">${r.stats.totalHours.toFixed(1)}h</td>
+      <td>${levelLabel(r.stats.pct)}</td>
+      <td style="color:var(--text-muted);font-size:12px">${esc(r.profile.trainee?.service||'—')}</td>
+    </tr>`).join('');}
+  }catch(e){
+    console.error('Admin:',e);
+    document.getElementById('admin-user-list').innerHTML='<div class="empty" style="color:#f87171">Erreur : '+e.message+'</div>';
+  }
+}
+
+// ─── ADMIN: CREATE USER ───────────────────────────────────
+window.openCreateUserModal=function(){
+  document.getElementById('create-user-error').style.display='none';
+  ['new-user-name','new-user-email','new-user-pwd'].forEach(id=>setVal(id,''));
+  setVal('new-user-role','user');
+  document.getElementById('create-user-modal').classList.add('open');
+};
+window.closeCreateUserModal=function(){document.getElementById('create-user-modal').classList.remove('open');};
+
+window.doCreateUser=async function(){
+  const name=val('new-user-name').trim(),email=val('new-user-email').trim(),pwd=val('new-user-pwd'),role=val('new-user-role');
+  const errEl=document.getElementById('create-user-error'),btn=document.getElementById('create-user-btn');
+  errEl.style.display='none';
+  if(!name||!email||!pwd){showErr(errEl,'Tous les champs sont obligatoires.');return;}
+  if(pwd.length<6){showErr(errEl,'Le mot de passe doit faire au moins 6 caractères.');return;}
+  btn.disabled=true;btn.textContent='Création…';
+  try{
+    const{data,error}=await sbAdmin.auth.admin.createUser({
+      email,password:pwd,user_metadata:{full_name:name},email_confirm:true});
+    if(error)throw error;
+    const newUid=data.user.id;
+    // Mettre à jour le profil créé par le trigger
+    await sbAdmin.from('profiles').update({role,full_name:name}).eq('id',newUid);
+    closeCreateUserModal();toast('Compte créé pour '+name+'.');loadAdminTab();
+  }catch(e){
+    const m=e.message;
+    showErr(errEl,
+      m.includes('already registered')||m.includes('already been registered')?'Cet email est déjà utilisé.':
+      m.includes('invalid_email')||m.includes('Invalid email')?'Email invalide.':
+      'Erreur : '+m);
+  }finally{btn.disabled=false;btn.textContent='Créer le compte';}
+};
+
+// ─── HYDRATE ─────────────────────────────────────────────
+function hydrateUI(){
+  renderProfiles();renderGlobalBanner();renderTraineeForm();
+  renderFilters();renderCompetences();renderLogs();renderHoursSummary();
+  renderStars();renderBilanSummary();renderDashboard();renderTeam();
+  if(!val('log-date'))setVal('log-date',new Date().toISOString().slice(0,10));
+}
+</script>
 </body>
-  </html>
+</html>
