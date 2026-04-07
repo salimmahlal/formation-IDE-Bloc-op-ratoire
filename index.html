@@ -122,14 +122,34 @@
     .banner-info h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
     .banner-info p { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 700px; }
     .banner-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
-    .stat-label { font-size: 10px; text-transform: uppercase; letter-spac.map(p=>p.name.split(' ')[0]),colors=profiles.map(p=>p.color+'cc');
-  chart('chart-team-pct','bar',{labels:names,datasets:[{data:profiles.map(p=>Math.round(computeStats(p).pct)),backgroundColor:colors,borderRadius:8}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{min:0,max:100,ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
-  chart('chart-team-hours','bar',{labels:names,datasets:[{data:profiles.map(p=>computeStats(p).totalHours),backgroundColor:colors,borderRadius:8}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
-  const avg=SPECS.slice(0,8).map(sp=>{if(!profiles.length)return 0;return Math.round(profiles.reduce((s,p)=>{const pts=sp.skills.reduce((a,sk)=>a+(p.skills[sk.id]||0),0);return s+(pts/(sp.skills.length*3)*100);},0)/profiles.length);});
-  chart('chart-team-radar','radar',{labels:SPECS.slice(0,8).map(sp=>sp.short),datasets:[{data:avg,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.14)',pointBackgroundColor:'#8b5cf6',borderWidth:2}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{suggestedMin:0,suggestedMax:100,ticks:{stepSize:25,color:'#6f88a7',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#9db2cf'}}}});
-}
+    .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); }
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--primary); margin-top: 2px; }
 
-// ─── Eointer; transition: all .18s; border-bottom: 2px solid transparent;
+    /* PROFILES BAR */
+    .profiles-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+    .profile-chip {
+      display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 40px; cursor: pointer; transition: all .18s;
+      border-color: var(--chip-color, var(--border));
+    }
+    .profile-chip.active { background: color-mix(in srgb, var(--chip-color) 12%, transparent); border-color: var(--chip-color); }
+    .profile-chip:hover { border-color: var(--chip-color, var(--primary)); }
+    .profile-chip .avatar {
+      width: 30px; height: 30px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 11px;
+      font-weight: 700; color: #08111e;
+    }
+    .profile-chip .meta { line-height: 1.3; }
+    .profile-chip .name { font-size: 13px; font-weight: 600; }
+    .profile-chip .sub { font-size: 11px; color: var(--text-muted); }
+
+    /* TABS */
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; flex-wrap: wrap; }
+    .tab {
+      padding: 10px 18px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      border: none; background: transparent; color: var(--text-muted); font-size: 13px;
+      font-weight: 500; cursor: pointer; transition: all .18s; border-bottom: 2px solid transparent;
       margin-bottom: -1px;
     }
     .tab:hover { color: var(--text); }
@@ -384,14 +404,14 @@
           <div class="section-head">Fiche apprenant / professionnel en parcours</div>
           <div class="form-group"><label>Nom complet</label><input type="text" id="t-name" oninput="autoSave()"></div>
           <div class="form-group"><label>Date d'arrivée</label><input type="date" id="t-arrival" oninput="autoSave()"></div>
-          <div class="form-group"><label>Tuteur référent</label><input type="text" id="t-tutor" oninput="autoSave()"></div>
-          <div class="form-group"><label>Service / pôle</label><input type="text" id="t-service" oninput="autoSave()"></div>
+          <div class="form-group"><label>Tuteur råférent</label><input type="text" id="t-tutor" oninput="autoSave()"></div>
+          <div class="form-group"><label>Service / pìte</label><input type="text" id="t-service" oninput="autoSave()"></div>
           <div class="form-group"><label>Niveau initial</label>
             <select id="t-level" onchange="autoSave()">
               <option value="">— Sélectionner —</option>
               <option value="Débutant">Débutant</option>
               <option value="Intermédiaire">Intermédiaire</option>
-              <option value="Avancé">Avancé</option>
+             <option value="Avancé">Avancé</option>
             </select>
           </div>
           <div class="form-group"><label>Durée prévue (mois)</label><input type="number" id="t-duration" oninput="autoSave()"></div>
@@ -433,7 +453,7 @@
           <div class="section-head">Évaluation formative</div>
           <div class="eval-row"><span>Technicité</span><div id="stars-tech" class="stars"></div></div>
           <div class="eval-row"><span>Autonomie</span><div id="stars-auto" class="stars"></div></div>
-          <div class="eval-row"><span>Riguiur</span><div id="stars-rigu" class="stars"></div></div>
+          <div class="eval-row"><span>Rigueur</span><div id="stars-rigu" class="stars"></div></div>
           <div class="eval-row"><span>Communication</span><div id="stars-comm" class="stars"></div></div>
           <div class="eval-row"><span>Gestion du stress</span><div id="stars-stre" class="stars"></div></div>
           <hr class="sep">
@@ -715,7 +735,7 @@ window.exitViewAs=async function(){
 // ─── PROFILES ─────────────────────────────────────────────
 function makeProfile(id,name,color){
   return{id,name,color,trainee:{name,arrival:'',tutor:'',service:'',level:'',duration:''},
-    skills:{},logs:[],bilan:{strengths:'',improve:'',goals:',sv�s:{tech:0,auto:0,rigu:0,comm:0,stre:0}}};
+    skills:{},logs:[],bilan:{strengths:'',improve:'',goals:'',stars:{tech:0,auto:0,rigu:0,comm:0,stre:0}}};
 }
 function current(){return appData.profiles[appData.currentProfile]||null;}
 
@@ -946,7 +966,7 @@ function renderCharts(){
   chart('chart-radar','radar',{labels:SPECS.slice(0,8).map(sp=>sp.short),datasets:[{data:rd,borderColor:'#22c7d8',backgroundColor:'rgba(34,199,216,.14)',pointBackgroundColor:'#22c7d8',borderWidth:2}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{suggestedMin:0,suggestedMax:100,ticks:{stepSize:25,color:'#6f88a7',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#9db2cf'}}}});
   const labels=SPECS.map(sp=>sp.short);
   chart('chart-stacks','bar',{labels,datasets:[
-    {label:'Observé',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===1).length),backgroundColor:'rgba(245,158,11,.72)',Stack:'s'},
+    {label:'Observé',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===1).length),backgroundColor:'rgba(245,158,11,.72)',stack:'s'},
     {label:'Pratique',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===2).length),backgroundColor:'rgba(249,115,22,.72)',stack:'s'},
     {label:'Validé',data:SPECS.map(sp=>sp.skills.filter(x=>(sk[x.id]||0)===3).length),backgroundColor:'rgba(16,185,129,.72)',stack:'s'}
   ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9db2cf'}}},scales:{x:{ticks:{color:'#89a1bf'},grid:{display:false}},y:{ticks:{color:'#89a1bf'},grid:{color:'rgba(255,255,255,.05)'}}}});
