@@ -552,7 +552,7 @@ const SUPABASE_SERVICE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 
 const sb      = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const sbAdmin = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE, {
-  auth: { autoRefreshToken: false, persistSession: false, storageKey: 'sb-admin-rjlbsfirwdbbzmpxhgfi' }
+  auth: { autoRefreshToken: false, persistSession: false, storageKey: 'sb-admin-rjlbsfirwdbbzmpxhgfi', lock: async (n,t,fn) => fn() }
 });
 
 // ─── CONSTANTS ────────────────────────────────────────────
